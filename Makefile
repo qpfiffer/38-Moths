@@ -1,10 +1,11 @@
 CFLAGS=-Werror -Wno-missing-field-initializers -Wextra -Wall -O0 -g3
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
-COMMON_OBJ=benchmark.o http.o models.o db.o parson.o utils.o vector.o logging.o
+COMMON_OBJ=utils.o vector.o logging.o http.o
+NAME=libfutility.so
 
 
-all: bin test $(NAME)
+all: lib test
 
 clean:
 	rm -f *.o
@@ -17,6 +18,6 @@ greshunkel_test: greshunkel_test.o greshunkel.o vector.o
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c $<
 
-bin: $(NAME)
-$(NAME): $(COMMON_OBJ) grengine.o greshunkel.o server.o stack.o parse.o main.o parson.o
+lib: $(NAME)
+$(NAME): $(COMMON_OBJ) grengine.o greshunkel.o server.o parse.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(NAME) $^ $(LIBS)
