@@ -1,0 +1,9 @@
+.gdbhistory
+*.o
+*.swp
+waifu.xyz
+dbctl
+greshunkel_test
+unit_test
+./webms
+.vagrant
