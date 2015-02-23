@@ -1,5 +1,7 @@
 // vim: noet ts=4 sw=4
 #pragma once
+#include <regex.h>
+#include "greshunkel.h"
 #include "parse.h"
 
 #define MAX_READ_LEN 1024
@@ -56,8 +58,6 @@ static const route r_404_route = {
 
 /* Utility functions for command handler tasks. */
 /* ------------------------------------------------------------------------ */
-
-struct greshunkel_ctext ctext;
 
 /* mmap()'s a file into memory and fills out the extra_data param on
  * the response object with a struct st. This needs to be present

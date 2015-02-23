@@ -30,12 +30,14 @@
 
 typedef struct acceptor_arg {
 	const route *all_routes;
+	const size_t num_routes;
 	const int main_sock_fd;
 } acceptor_arg;
 
 static void *acceptor(void *arg) {
 	const acceptor_arg *args = arg;
 	const int main_sock_fd = args->main_sock_fd;
+	const size_t num_routes = args->num_routes;
 	const route *all_routes = args->all_routes;
 	while(1) {
 		struct sockaddr_storage their_addr = {0};
@@ -47,14 +49,17 @@ static void *acceptor(void *arg) {
 			log_msg(LOG_ERR, "Could not accept new connection.");
 			return NULL;
 		} else {
-			respond(new_fd, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
+			respond(new_fd, all_routes, num_routes);
 			close(new_fd);
 		}
 	}
 	return NULL;
 }
 
-int http_serve(int main_sock_fd, const int num_threads, const struct route all_routes[static 1]) {
+int http_serve(int main_sock_fd,
+		const int num_threads,
+		const struct route *routes,
+		const size_t num_routes) {
 	/* Our acceptor pool: */
 	pthread_t workers[num_threads];
 
@@ -90,7 +95,8 @@ int http_serve(int main_sock_fd, const int num_threads, const struct route all_r
 	int i;
 	for (i = 0; i < num_threads; i++) {
 		struct acceptor_arg args = {
-			.all_routes = all_routes,
+			.all_routes = routes,
+			.num_routes = num_routes,
 			.main_sock_fd = main_sock_fd,
 		};
 		if (pthread_create(&workers[i], NULL, acceptor, &args) != 0) {
