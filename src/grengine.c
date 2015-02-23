@@ -166,7 +166,8 @@ static int mmap_file_ol(const char *file_path, http_response *response,
 			break;
 	}
 	strncpy(ending, file_path + i, sizeof(ending));
-	guess_mimetype(ending, sizeof(ending), response);
+	if (strlen(response->mimetype) == 0)
+		guess_mimetype(ending, sizeof(ending), response);
 
 	return 200;
 }
