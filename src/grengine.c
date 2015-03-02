@@ -160,14 +160,23 @@ static int mmap_file_ol(const char *file_path, http_response *response,
 	/* Figure out the mimetype for this resource: */
 	char ending[16] = {0};
 	unsigned int i = sizeof(ending);
+	int found_dot = 0;
 	const size_t res_len = strlen(file_path);
 	for (i = res_len; i > (res_len - sizeof(ending)); i--) {
-		if (file_path[i] == '.')
+		if (file_path[i] == '.') {
+			found_dot = 1;
 			break;
+		}
 	}
-	strncpy(ending, file_path + i, sizeof(ending));
-	if (strlen(response->mimetype) == 0)
-		guess_mimetype(ending, sizeof(ending), response);
+	if (strlen(response->mimetype) == 0) {
+		if (found_dot) {
+			strncpy(ending, file_path + i, sizeof(ending));
+			guess_mimetype(ending, sizeof(ending), response);
+		} else {
+			/* Fuck it, do something smart later with render_file. */
+			strncpy(response->mimetype, "text/html", sizeof(response->mimetype));
+		}
+	}
 
 	return 200;
 }
@@ -243,7 +252,7 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	char to_read[MAX_READ_LEN] = {0};
 	char *actual_response = NULL;
 	http_response response = {
-		.mimetype = "text/html",
+		.mimetype = {0},
 		.byte_range = {0},
 		0
 	};
