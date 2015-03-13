@@ -323,8 +323,13 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 
 		response_code = 206;
 	}
-	assert(response.outsize > 0);
-	assert(response.out != NULL);
+
+	if (response_code == 404 && (response.outsize == 0 || response.out == NULL)) {
+		response_code = r_404_handler(&request, &response);
+	} else {
+		assert(response.outsize > 0);
+		assert(response.out != NULL);
+	}
 
 	log_request(&request, &response, response_code);
 
