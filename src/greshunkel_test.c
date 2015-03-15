@@ -8,6 +8,7 @@
 const char document[] =
 "<html>\n"
 "	<body>\n"
+"		xXx SCREAM _include.html xXx\n"
 "		xXx LOOP i LOOP_TEST xXx\n"
 "			<li>xXx @TEST xXx xXx @i xXx</li>\n"
 "		xXx BBL xXx\n"

@@ -17,9 +17,16 @@ struct line {
 
 typedef struct line line;
 
+/* Compiled egex vars. */
+static regex_t c_var_regex;
+static regex_t c_loop_regex;
+static regex_t c_filter_regex;
+static regex_t c_include_regex;
+
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
 static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
+static const char include_regex[] = "^\\s+xXx SCREAM ([a-zA-Z_]+) xXx";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(struct greshunkel_ctext));
@@ -199,12 +206,12 @@ static line read_line(const char *buf) {
 }
 
 static line
-_filter_line(const greshunkel_ctext *ctext, const line *operating_line, const regex_t *filter_regex) {
+_filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 	line to_return = {0};
 	/* Now we match template filters: */
 	regmatch_t filter_matches[3];
 	/* TODO: More than one filter per line. */
-	if (regexec(filter_regex, operating_line->data, 3, filter_matches, 0) == 0) {
+	if (regexec(&c_filter_regex, operating_line->data, 3, filter_matches, 0) == 0) {
 		int matched_at_least_once = 0;
 		const regmatch_t function_name = filter_matches[1];
 		const regmatch_t argument = filter_matches[2];
@@ -258,14 +265,14 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const re
 }
 
 static line
-_interpolate_line(const greshunkel_ctext *ctext, const line current_line, const regex_t *var_regex, const regex_t *filter_regex) {
+_interpolate_line(const greshunkel_ctext *ctext, const line current_line) {
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
 	regmatch_t match[2];
 	const line *operating_line = &current_line;
 	assert(operating_line->data != NULL);
 
-	while (regexec(var_regex, operating_line->data, 2, match, 0) == 0) {
+	while (regexec(&c_var_regex, operating_line->data, 2, match, 0) == 0) {
 		int matched_at_least_once = 0;
 
 		/* We linearly search through our variables because I don't have
@@ -321,7 +328,7 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 		/* Set the next regex check after this one. */
 		memset(match, 0, sizeof(match));
 	}
-	line filtered_line = _filter_line(ctext, operating_line, filter_regex);
+	line filtered_line = _filter_line(ctext, operating_line);
 	if (filtered_line.data != interpolated_line.data && interpolated_line.data != NULL)
 		free(operating_line->data);
 
@@ -329,14 +336,14 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 }
 
 static line
-_interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_t *vr, const regex_t *fr, const char *buf, size_t *num_read) {
+_interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_read) {
 	line to_return = {0};
 	*num_read = 0;
 
 	regmatch_t match[4] = {{0}};
 	/* TODO: Support loops inside of loops. That probably means a
 	 * while loop here. */
-	if (regexec(lr, buf, 4, match, 0) == 0) {
+	if (regexec(&c_loop_regex, buf, 4, match, 0) == 0) {
 		/* Variables we're going to need: */
 		const regmatch_t loop_variable = match[1];
 		const regmatch_t variable_name = match[2];
@@ -399,7 +406,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 					/* Recurse contexts until my fucking mind melts. */
 					greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
 					gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
-					line rendered_piece = _interpolate_line(_temp_ctext, to_render_line, vr, fr);
+					line rendered_piece = _interpolate_line(_temp_ctext, to_render_line);
 					gshkl_free_context(_temp_ctext);
 
 					const size_t old_size = to_return.size;
@@ -421,22 +428,25 @@ _interpolate_loop(const greshunkel_ctext *ctext, const regex_t *lr, const regex_
 
 	return to_return;
 }
-
-static inline void _compile_regex(regex_t *vr, regex_t *lr, regex_t *fr) {
-	int reti = regcomp(vr, variable_regex, REG_EXTENDED);
+static inline void _compile_regex() {
+	int reti = regcomp(&c_var_regex, variable_regex, REG_EXTENDED);
 	assert(reti == 0);
 
-	reti = regcomp(lr, loop_regex, REG_EXTENDED);
+	reti = regcomp(&c_loop_regex, loop_regex, REG_EXTENDED);
 	assert(reti == 0);
 
-	reti = regcomp(fr, filter_regex, REG_EXTENDED);
+	reti = regcomp(&c_filter_regex, filter_regex, REG_EXTENDED);
+	assert(reti == 0);
+
+	reti = regcomp(&c_include_regex, include_regex, REG_EXTENDED);
 	assert(reti == 0);
 }
 
-static inline void _destroy_regex(regex_t *vr, regex_t *lr, regex_t *fr) {
-	regfree(vr);
-	regfree(lr);
-	regfree(fr);
+static inline void _destroy_regex() {
+	regfree(&c_var_regex);
+	regfree(&c_loop_regex);
+	regfree(&c_filter_regex);
+	regfree(&c_include_regex);
 }
 
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize) {
@@ -447,8 +457,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 	char *rendered = NULL;
 	*outsize = 0;
 
-	regex_t var_regex, loop_regex, filter_regex;
-	_compile_regex(&var_regex, &loop_regex, &filter_regex);
+	_compile_regex();
 
 	size_t num_read = 0;
 	while (num_read < original_size) {
@@ -460,11 +469,11 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		 * in the offset and just let it go. If it processes more than the
 		 * size of the current line, we know it did something.
 		 * Append the whole line it gets back. */
-		to_append = _interpolate_loop(ctext, &loop_regex, &var_regex, &filter_regex, to_render + num_read, &loop_readahead);
+		to_append = _interpolate_loop(ctext, to_render + num_read, &loop_readahead);
 
 		/* Otherwise just interpolate the line like normal. */
 		if (loop_readahead == 0) {
-			to_append = _interpolate_line(ctext, current_line, &var_regex, &filter_regex);
+			to_append = _interpolate_line(ctext, current_line);
 			num_read += current_line.size;
 		} else {
 			num_read += loop_readahead;
@@ -484,7 +493,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 			free(current_line.data);
 		free(to_append.data);
 	}
-	_destroy_regex(&var_regex, &loop_regex, &filter_regex);
+	_destroy_regex();
 	rendered[*outsize - 1] = '\0';
 	return rendered;
 
