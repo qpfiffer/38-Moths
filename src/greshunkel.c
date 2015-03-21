@@ -214,18 +214,17 @@ static line read_line(const char *buf) {
 
 /* I'm calling this "vishnu" because i don't actually know what it's for */
 static void vishnu(line *new_line_to_add, const match_t match, const char *result, const line *operating_line) {
-	const size_t first_piece_size = match.rm_so;
-	const size_t middle_piece_size = strlen(result);
-	const size_t last_piece_size = operating_line->size - match.rm_eo;
+	char *p;
+	const size_t sizes[3] = {match.rm_so, strlen(result), operating_line->size - match.rm_eo};
 
-	/* Sorry, Vishnu... */
-	new_line_to_add->size = first_piece_size + middle_piece_size + last_piece_size;
-	new_line_to_add->data = calloc(1, new_line_to_add->size + 1);
+	new_line_to_add->size = sizes[0] + sizes[1] + sizes[2];
+	new_line_to_add->data = p = calloc(1, new_line_to_add->size + 1);
 
-	strncpy(new_line_to_add->data, operating_line->data, first_piece_size);
-	strncpy(new_line_to_add->data + first_piece_size, result, middle_piece_size);
-	strncpy(new_line_to_add->data + first_piece_size + middle_piece_size,
-			operating_line->data + match.rm_eo, last_piece_size);
+	strncpy(p, operating_line->data, sizes[0]);
+	p += sizes[0];
+	strncpy(p, result, sizes[1]);
+	p += sizes[1];
+	strncpy(p, operating_line->data + match.rm_eo, sizes[2]);
 }
 
 static int regexec_2_0_beta(const regex_t *preg, const char *string, size_t nmatch, match_t pmatch[]) {
