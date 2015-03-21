@@ -205,6 +205,22 @@ static line read_line(const char *buf) {
 	return to_return;
 }
 
+/* I'm calling this "vishnu" because i don't actually know what it's for */
+static void vishnu(line *new_line_to_add, const regmatch_t match, const char *result, const line *operating_line) {
+	const size_t first_piece_size = match.rm_so;
+	const size_t middle_piece_size = strlen(result);
+	const size_t last_piece_size = operating_line->size - match.rm_eo;
+
+	/* Sorry, Vishnu... */
+	new_line_to_add->size = first_piece_size + middle_piece_size + last_piece_size;
+	new_line_to_add->data = calloc(1, new_line_to_add->size + 1);
+
+	strncpy(new_line_to_add->data, operating_line->data, first_piece_size);
+	strncpy(new_line_to_add->data + first_piece_size, result, middle_piece_size);
+	strncpy(new_line_to_add->data + first_piece_size + middle_piece_size,
+			operating_line->data + match.rm_eo, last_piece_size);
+}
+
 static line
 _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 	line to_return = {0};
@@ -236,20 +252,7 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 				if (strncmp_res == 0) {
 					/* Pass it to the filter function. */
 					char *filter_result = filter->filter_func(rendered_argument);
-					const size_t result_size = strlen(filter_result);
-
-					const size_t first_piece_size = filter_matches[0].rm_so;
-					const size_t middle_piece_size = result_size;
-					const size_t last_piece_size = operating_line->size - filter_matches[0].rm_eo;
-					/* Sorry, Vishnu... */
-					to_return.size = first_piece_size + middle_piece_size + last_piece_size;
-					to_return.data = calloc(1, to_return.size);
-
-					strncpy(to_return.data, operating_line->data, first_piece_size);
-					strncpy(to_return.data + first_piece_size, filter_result, middle_piece_size);
-					strncpy(to_return.data + first_piece_size + middle_piece_size,
-							operating_line->data + filter_matches[0].rm_eo,
-							last_piece_size);
+					vishnu(&to_return, filter_matches[0], filter_result, operating_line);
 					if (filter->clean_up != NULL)
 						filter->clean_up(filter_result);
 					return to_return;
@@ -291,19 +294,7 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line) {
 				assert(tuple->name != NULL);
 				int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
 				if (tuple->type == GSHKL_STR && strcmp_result == 0) {
-					/* Do actual printing here */
-					const size_t first_piece_size = match[0].rm_so;
-					const size_t middle_piece_size = strlen(tuple->value.str);
-					const size_t last_piece_size = operating_line->size - match[0].rm_eo;
-					/* Sorry, Vishnu... */
-					new_line_to_add.size = first_piece_size + middle_piece_size + last_piece_size;
-					new_line_to_add.data = calloc(1, new_line_to_add.size + 1);
-
-					strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
-					strncpy(new_line_to_add.data + first_piece_size, tuple->value.str, middle_piece_size);
-					strncpy(new_line_to_add.data + first_piece_size + middle_piece_size,
-							operating_line->data + match[0].rm_eo,
-							last_piece_size);
+					vishnu(&new_line_to_add, match[0], tuple->value.str, operating_line);
 
 					matched_at_least_once = 1;
 					break;
