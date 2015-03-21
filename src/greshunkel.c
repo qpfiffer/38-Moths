@@ -221,6 +221,11 @@ static void vishnu(line *new_line_to_add, const regmatch_t match, const char *re
 			operating_line->data + match.rm_eo, last_piece_size);
 }
 
+static char *matchdup(const regmatch_t match, const char *start) {
+	assert(match.rm_so != -1 && match.rm_eo != -1);
+	return strndup(start + match.rm_so, match.rm_eo - match.rm_so);
+}
+
 static line
 _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 	line to_return = {0};
@@ -233,12 +238,7 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 		const regmatch_t argument = filter_matches[2];
 
 		/* Render the argument out so we can pass it to the filter function. */
-		char rendered_argument[argument.rm_eo - argument.rm_so];
-		memset(rendered_argument, '\0', sizeof(rendered_argument));
-		strncpy(rendered_argument,
-				operating_line->data + argument.rm_so,
-				sizeof(rendered_argument));
-		rendered_argument[sizeof(rendered_argument)] = '\0';
+		char *rendered_argument = matchdup(argument, operating_line->data);
 
 		const greshunkel_ctext *current_ctext = ctext;
 		while (current_ctext != NULL) {
@@ -255,11 +255,15 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 					vishnu(&to_return, filter_matches[0], filter_result, operating_line);
 					if (filter->clean_up != NULL)
 						filter->clean_up(filter_result);
+
+					free(rendered_argument);
 					return to_return;
 				}
 			}
 			current_ctext = current_ctext->parent;
 		}
+
+		free(rendered_argument);
 		assert(matched_at_least_once == 1);
 	}
 
@@ -356,16 +360,12 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		*num_read = loop_meat.rm_eo + strlen("xXx BBL xXx");
 
 		/* This is the thing we're going to render over and over and over again. */
-		char loop_piece_to_render[loop_meat.rm_eo - loop_meat.rm_so];
-		memset(loop_piece_to_render, '\0', sizeof(loop_piece_to_render));
-		strncpy(loop_piece_to_render, buf + loop_meat.rm_so, sizeof(loop_piece_to_render));
+		char *loop_variable_name_rendered = matchdup(loop_variable, buf);
 
-		char loop_variable_name_rendered[WISDOM_OF_WORDS] = {0};
-		const size_t _bigger = loop_variable.rm_eo - loop_variable.rm_so > WISDOM_OF_WORDS ? WISDOM_OF_WORDS :
-			loop_variable.rm_eo - loop_variable.rm_so;
-		strncpy(loop_variable_name_rendered, buf + loop_variable.rm_so, _bigger);
+		line to_render_line;
+		to_render_line.data = matchdup(loop_meat, buf);
+		to_render_line.size = strlen(to_render_line.data);
 
-		line to_render_line = { .size = sizeof(loop_piece_to_render), .data = loop_piece_to_render };
 		/* Now we start iterating through values in our context, looking for ARR
 		 * types that have the correct name. */
 		vector *current_values = ctext->values;
@@ -410,6 +410,10 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 			}
 
 		}
+
+		free(loop_variable_name_rendered);
+		free(to_render_line.data);
+
 		if (matched_at_least_once != 1) {
 			printf("Did not match a variable that needed to be matched.\n");
 			printf("Line: %s\n", buf);
