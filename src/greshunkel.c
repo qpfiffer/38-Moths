@@ -17,6 +17,13 @@ struct line {
 
 typedef struct line line;
 
+typedef struct _match {
+	regoff_t rm_so;
+	regoff_t rm_eo;
+	size_t len;
+	const char *start;
+} match_t;
+
 /* Compiled egex vars. */
 static regex_t c_var_regex;
 static regex_t c_loop_regex;
@@ -205,24 +212,50 @@ static line read_line(const char *buf) {
 	return to_return;
 }
 
+/* I'm calling this "vishnu" because i don't actually know what it's for */
+static void vishnu(line *new_line_to_add, const match_t match, const char *result, const line *operating_line) {
+	const size_t first_piece_size = match.rm_so;
+	const size_t middle_piece_size = strlen(result);
+	const size_t last_piece_size = operating_line->size - match.rm_eo;
+
+	/* Sorry, Vishnu... */
+	new_line_to_add->size = first_piece_size + middle_piece_size + last_piece_size;
+	new_line_to_add->data = calloc(1, new_line_to_add->size + 1);
+
+	strncpy(new_line_to_add->data, operating_line->data, first_piece_size);
+	strncpy(new_line_to_add->data + first_piece_size, result, middle_piece_size);
+	strncpy(new_line_to_add->data + first_piece_size + middle_piece_size,
+			operating_line->data + match.rm_eo, last_piece_size);
+}
+
+static int regexec_2_0_beta(const regex_t *preg, const char *string, size_t nmatch, match_t pmatch[]) {
+	unsigned int i;
+	regmatch_t matches[nmatch];
+	if (regexec(preg, string, nmatch, matches, 0) != 0) {
+		return 1;
+	}
+	for (i = 0; i < nmatch; i++) {
+		pmatch[i].rm_so = matches[i].rm_so;
+		pmatch[i].rm_eo = matches[i].rm_eo;
+		pmatch[i].len = matches[i].rm_eo - matches[i].rm_so;
+		pmatch[i].start = string + matches[i].rm_so;
+	}
+	return 0;
+}
+
 static line
 _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 	line to_return = {0};
 	/* Now we match template filters: */
-	regmatch_t filter_matches[3];
+	match_t filter_matches[3];
 	/* TODO: More than one filter per line. */
-	if (regexec(&c_filter_regex, operating_line->data, 3, filter_matches, 0) == 0) {
+	if (regexec_2_0_beta(&c_filter_regex, operating_line->data, 3, filter_matches) == 0) {
 		int matched_at_least_once = 0;
-		const regmatch_t function_name = filter_matches[1];
-		const regmatch_t argument = filter_matches[2];
+		const match_t function_name = filter_matches[1];
+		const match_t argument = filter_matches[2];
 
 		/* Render the argument out so we can pass it to the filter function. */
-		char rendered_argument[argument.rm_eo - argument.rm_so];
-		memset(rendered_argument, '\0', sizeof(rendered_argument));
-		strncpy(rendered_argument,
-				operating_line->data + argument.rm_so,
-				sizeof(rendered_argument));
-		rendered_argument[sizeof(rendered_argument)] = '\0';
+		char *rendered_argument = strndup(argument.start, argument.len);
 
 		const greshunkel_ctext *current_ctext = ctext;
 		while (current_ctext != NULL) {
@@ -230,33 +263,22 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 			unsigned int i;
 			for (i = 0; i < current_funcs->count; i++) {
 				greshunkel_filter *filter = (greshunkel_filter *)vector_get(current_funcs, i);
-				int strncmp_res = strncmp(filter->name,
-						operating_line->data + function_name.rm_so,
-						strlen(filter->name));
+				int strncmp_res = strncmp(filter->name, function_name.start, strlen(filter->name));
 				if (strncmp_res == 0) {
 					/* Pass it to the filter function. */
 					char *filter_result = filter->filter_func(rendered_argument);
-					const size_t result_size = strlen(filter_result);
-
-					const size_t first_piece_size = filter_matches[0].rm_so;
-					const size_t middle_piece_size = result_size;
-					const size_t last_piece_size = operating_line->size - filter_matches[0].rm_eo;
-					/* Sorry, Vishnu... */
-					to_return.size = first_piece_size + middle_piece_size + last_piece_size;
-					to_return.data = calloc(1, to_return.size);
-
-					strncpy(to_return.data, operating_line->data, first_piece_size);
-					strncpy(to_return.data + first_piece_size, filter_result, middle_piece_size);
-					strncpy(to_return.data + first_piece_size + middle_piece_size,
-							operating_line->data + filter_matches[0].rm_eo,
-							last_piece_size);
+					vishnu(&to_return, filter_matches[0], filter_result, operating_line);
 					if (filter->clean_up != NULL)
 						filter->clean_up(filter_result);
+
+					free(rendered_argument);
 					return to_return;
 				}
 			}
 			current_ctext = current_ctext->parent;
 		}
+
+		free(rendered_argument);
 		assert(matched_at_least_once == 1);
 	}
 
@@ -268,11 +290,11 @@ static line
 _interpolate_line(const greshunkel_ctext *ctext, const line current_line) {
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
-	regmatch_t match[2];
+	match_t match[2];
 	const line *operating_line = &current_line;
 	assert(operating_line->data != NULL);
 
-	while (regexec(&c_var_regex, operating_line->data, 2, match, 0) == 0) {
+	while (regexec_2_0_beta(&c_var_regex, operating_line->data, 2, match) == 0) {
 		int matched_at_least_once = 0;
 
 		/* We linearly search through our variables because I don't have
@@ -285,25 +307,13 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line) {
 			for (i = 0; i < current_values->count; i++) {
 				const greshunkel_tuple *tuple = (greshunkel_tuple *)vector_get(current_values, i);
 				/* This is the actual part of the regex we care about. */
-				const regmatch_t inner_match = match[1];
+				const match_t inner_match = match[1];
 				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
 
 				assert(tuple->name != NULL);
-				int strcmp_result = strncmp(tuple->name, operating_line->data + inner_match.rm_so, strlen(tuple->name));
+				int strcmp_result = strncmp(tuple->name, inner_match.start, strlen(tuple->name));
 				if (tuple->type == GSHKL_STR && strcmp_result == 0) {
-					/* Do actual printing here */
-					const size_t first_piece_size = match[0].rm_so;
-					const size_t middle_piece_size = strlen(tuple->value.str);
-					const size_t last_piece_size = operating_line->size - match[0].rm_eo;
-					/* Sorry, Vishnu... */
-					new_line_to_add.size = first_piece_size + middle_piece_size + last_piece_size;
-					new_line_to_add.data = calloc(1, new_line_to_add.size + 1);
-
-					strncpy(new_line_to_add.data, operating_line->data, first_piece_size);
-					strncpy(new_line_to_add.data + first_piece_size, tuple->value.str, middle_piece_size);
-					strncpy(new_line_to_add.data + first_piece_size + middle_piece_size,
-							operating_line->data + match[0].rm_eo,
-							last_piece_size);
+					vishnu(&new_line_to_add, match[0], tuple->value.str, operating_line);
 
 					matched_at_least_once = 1;
 					break;
@@ -340,14 +350,14 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 	line to_return = {0};
 	*num_read = 0;
 
-	regmatch_t match[4] = {{0}};
+	match_t match[4] = {{0}};
 	/* TODO: Support loops inside of loops. That probably means a
 	 * while loop here. */
-	if (regexec(&c_loop_regex, buf, 4, match, 0) == 0) {
+	if (regexec_2_0_beta(&c_loop_regex, buf, 4, match) == 0) {
 		/* Variables we're going to need: */
-		const regmatch_t loop_variable = match[1];
-		const regmatch_t variable_name = match[2];
-		regmatch_t loop_meat = match[3];
+		const match_t loop_variable = match[1];
+		const match_t variable_name = match[2];
+		match_t loop_meat = match[3];
 		/* Make sure they were matched: */
 		assert(variable_name.rm_so != -1 && variable_name.rm_eo != -1);
 		assert(loop_variable.rm_so != -1 && loop_variable.rm_eo != -1);
@@ -355,7 +365,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 
 		size_t possible_dif = 0;
 		const char *closest_BBL = NULL;
-		closest_BBL = strstr(buf + loop_meat.rm_so, "xXx BBL xXx");
+		closest_BBL = strstr(loop_meat.start, "xXx BBL xXx");
 		possible_dif = closest_BBL - buf;
 		if (possible_dif != (unsigned int)loop_meat.rm_so) {
 			loop_meat.rm_eo = possible_dif;
@@ -365,16 +375,12 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		*num_read = loop_meat.rm_eo + strlen("xXx BBL xXx");
 
 		/* This is the thing we're going to render over and over and over again. */
-		char loop_piece_to_render[loop_meat.rm_eo - loop_meat.rm_so];
-		memset(loop_piece_to_render, '\0', sizeof(loop_piece_to_render));
-		strncpy(loop_piece_to_render, buf + loop_meat.rm_so, sizeof(loop_piece_to_render));
+		char *loop_variable_name_rendered = strndup(loop_variable.start, loop_variable.len);
 
-		char loop_variable_name_rendered[WISDOM_OF_WORDS] = {0};
-		const size_t _bigger = loop_variable.rm_eo - loop_variable.rm_so > WISDOM_OF_WORDS ? WISDOM_OF_WORDS :
-			loop_variable.rm_eo - loop_variable.rm_so;
-		strncpy(loop_variable_name_rendered, buf + loop_variable.rm_so, _bigger);
+		line to_render_line;
+		to_render_line.data = strndup(loop_meat.start, loop_meat.len);
+		to_render_line.size = loop_meat.len;
 
-		line to_render_line = { .size = sizeof(loop_piece_to_render), .data = loop_piece_to_render };
 		/* Now we start iterating through values in our context, looking for ARR
 		 * types that have the correct name. */
 		vector *current_values = ctext->values;
@@ -391,7 +397,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 			/* Found an array. */
 			assert(tuple->name != NULL);
 
-			int strcmp_result = strncmp(tuple->name, buf + variable_name.rm_so, strlen(tuple->name));
+			int strcmp_result = strncmp(tuple->name, variable_name.start, strlen(tuple->name));
 			if (tuple->type == GSHKL_ARR && strcmp_result == 0) {
 				matched_at_least_once = 1;
 
@@ -419,6 +425,10 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 			}
 
 		}
+
+		free(loop_variable_name_rendered);
+		free(to_render_line.data);
+
 		if (matched_at_least_once != 1) {
 			printf("Did not match a variable that needed to be matched.\n");
 			printf("Line: %s\n", buf);
