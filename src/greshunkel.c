@@ -369,6 +369,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		possible_dif = closest_BBL - buf;
 		if (possible_dif != (unsigned int)loop_meat.rm_so) {
 			loop_meat.rm_eo = possible_dif;
+			loop_meat.len = loop_meat.rm_eo - loop_meat.rm_so;
 		}
 
 		/* We found a fucking loop, holy shit */
