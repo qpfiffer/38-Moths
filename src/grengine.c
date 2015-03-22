@@ -42,6 +42,22 @@ static const char r_206[] =
 	"Connection: close\r\n"
 	"Server: waifu.xyz/bitch\r\n\r\n";
 
+/* internal struct, for mimetype guesses */
+struct {
+	char *ext;
+	char *type;
+} mimetype_mapping[] = {
+	{".css", "text/css"},
+	{".jpg", "image/jpeg"},
+	{".txt", "text/plain"},
+	{".html", "text/html"},
+	{".ico", "image/x-icon"},
+	{".webm", "video/webm"},
+	{".gif", "image/gif"},
+	{".js", "text/javascript"},
+	{NULL, NULL}
+};
+
 /* This is used to map between the return codes of responses to their headers: */
 static const code_to_message response_headers[] = {
 	{200, r_200},
@@ -65,26 +81,15 @@ int r_404_handler(const http_request *request, http_response *response) {
 }
 
 void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response) {
-	/* This is how we do mimetypes. lol. */
-	if (strncasecmp(ending, ".css", ending_siz) == 0) {
-		strncpy(response->mimetype, "text/css", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".jpg", ending_siz) == 0) {
-		strncpy(response->mimetype, "image/jpeg", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".txt", ending_siz) == 0) {
-		strncpy(response->mimetype, "text/plain", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".html", ending_siz) == 0) {
-		strncpy(response->mimetype, "text/html", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".ico", ending_siz) == 0) {
-		strncpy(response->mimetype, "image/x-icon", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".webm", ending_siz) == 0) {
-		strncpy(response->mimetype, "video/webm", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".gif", ending_siz) == 0) {
-		strncpy(response->mimetype, "image/gif", sizeof(response->mimetype));
-	} else if (strncasecmp(ending, ".js", ending_siz) == 0) {
-		strncpy(response->mimetype, "text/javascript", sizeof(response->mimetype));
-	} else {
-		strncpy(response->mimetype, "application/octet-stream", sizeof(response->mimetype));
+	int i;
+	char *type = "application/octet-stream";
+	for (i = 0; mimetype_mapping[i].ext; i++) {
+		if (strncasecmp(ending, mimetype_mapping[i].ext, ending_siz) == 0) {
+			type = mimetype_mapping[i].type;
+			break;
+		}
 	}
+	strncpy(response->mimetype, type, sizeof(response->mimetype));
 }
 
 int render_file(const struct greshunkel_ctext *ctext, const char *file_path, http_response *response) {
