@@ -242,6 +242,26 @@ static int regexec_2_0_beta(const regex_t *preg, const char *string, size_t nmat
 	return 0;
 }
 
+/* finds a variable or filter by name, returns first matching item or NULL if none found
+ * find_values == 1 uses ctext->values, otherwise, ctext->filter_functions */
+static const void *find_needle(const greshunkel_ctext *ctext, const char *needle, int find_values) {
+	const greshunkel_ctext *current_ctext = ctext;
+	while (current_ctext != NULL) {
+		vector *current_vector;
+		current_vector = (find_values) ? current_ctext->values : current_ctext->filter_functions;
+		unsigned int i;
+		for (i = 0; i < current_vector->count; i++) {
+			const greshunkel_named_item *item = (greshunkel_named_item *)vector_get(current_vector, i);
+			assert(item->name != NULL);
+			if (strncmp(item->name, needle, strlen(item->name)) == 0) {
+				return item;
+			}
+		}
+		current_ctext = current_ctext->parent;
+	}
+	return NULL;
+}
+
 static line
 _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 	line to_return = {0};
@@ -249,36 +269,27 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line) {
 	match_t filter_matches[3];
 	/* TODO: More than one filter per line. */
 	if (regexec_2_0_beta(&c_filter_regex, operating_line->data, 3, filter_matches) == 0) {
-		int matched_at_least_once = 0;
 		const match_t function_name = filter_matches[1];
 		const match_t argument = filter_matches[2];
 
-		/* Render the argument out so we can pass it to the filter function. */
-		char *rendered_argument = strndup(argument.start, argument.len);
+		const greshunkel_filter *filter;
+		if ((filter = find_needle(ctext, function_name.start, 0))) {
 
-		const greshunkel_ctext *current_ctext = ctext;
-		while (current_ctext != NULL) {
-			vector *current_funcs = current_ctext->filter_functions;
-			unsigned int i;
-			for (i = 0; i < current_funcs->count; i++) {
-				greshunkel_filter *filter = (greshunkel_filter *)vector_get(current_funcs, i);
-				int strncmp_res = strncmp(filter->name, function_name.start, strlen(filter->name));
-				if (strncmp_res == 0) {
-					/* Pass it to the filter function. */
-					char *filter_result = filter->filter_func(rendered_argument);
-					vishnu(&to_return, filter_matches[0], filter_result, operating_line);
-					if (filter->clean_up != NULL)
-						filter->clean_up(filter_result);
+			/* Render the argument out so we can pass it to the filter function. */
+			char *rendered_argument = strndup(argument.start, argument.len);
 
-					free(rendered_argument);
-					return to_return;
-				}
-			}
-			current_ctext = current_ctext->parent;
+			/* Pass it to the filter function. */
+			char *filter_result = filter->filter_func(rendered_argument);
+
+			vishnu(&to_return, filter_matches[0], filter_result, operating_line);
+
+			if (filter->clean_up != NULL)
+				filter->clean_up(filter_result);
+
+			free(rendered_argument);
+			return to_return;
 		}
-
-		free(rendered_argument);
-		assert(matched_at_least_once == 1);
+		assert(filter != NULL);
 	}
 
 	/* We didn't match any filters. Just return the operating line. */
@@ -294,37 +305,18 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line) {
 	assert(operating_line->data != NULL);
 
 	while (regexec_2_0_beta(&c_var_regex, operating_line->data, 2, match) == 0) {
-		int matched_at_least_once = 0;
+		const match_t inner_match = match[1];
+		assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
 
-		/* We linearly search through our variables because I don't have
-		 * a hash map. C is "fast enough" */
-		const greshunkel_ctext *current_ctext = ctext;
-		while (current_ctext != NULL) {
-			/* We matched. */
-			vector *current_values = current_ctext->values;
-			unsigned int i;
-			for (i = 0; i < current_values->count; i++) {
-				const greshunkel_tuple *tuple = (greshunkel_tuple *)vector_get(current_values, i);
-				/* This is the actual part of the regex we care about. */
-				const match_t inner_match = match[1];
-				assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
-
-				assert(tuple->name != NULL);
-				int strcmp_result = strncmp(tuple->name, inner_match.start, strlen(tuple->name));
-				if (tuple->type == GSHKL_STR && strcmp_result == 0) {
-					vishnu(&new_line_to_add, match[0], tuple->value.str, operating_line);
-
-					matched_at_least_once = 1;
-					break;
-				}
-			}
-			current_ctext = current_ctext->parent;
-		}
-		/* Blow up if we had a variable that wasn't in the context. */
-		if (matched_at_least_once != 1) {
+		const greshunkel_tuple *tuple;
+		if ((tuple = find_needle(ctext, inner_match.start, 1)) && tuple->type == GSHKL_STR) {
+			vishnu(&new_line_to_add, match[0], tuple->value.str, operating_line);
+		} else {
+			/* Blow up if we had a variable that wasn't in the context. */
 			printf("Did not match a variable that needed to be matched.\n");
 			printf("Line: %s\n", operating_line->data);
-			assert(matched_at_least_once == 1);
+			assert(tuple != NULL);
+			assert(tuple->type == GSHKL_STR);
 		}
 
 		free(interpolated_line.data);
@@ -374,66 +366,45 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		/* We found a fucking loop, holy shit */
 		*num_read = loop_meat.rm_eo + strlen("xXx BBL xXx");
 
-		/* This is the thing we're going to render over and over and over again. */
-		char *loop_variable_name_rendered = strndup(loop_variable.start, loop_variable.len);
+		const greshunkel_tuple *tuple;
+		if (!((tuple = find_needle(ctext, variable_name.start, 1)) && tuple->type == GSHKL_ARR)) {
+			printf("Did not match a variable that needed to be matched.\n");
+			printf("Line: %s\n", buf);
+			assert(tuple != NULL);
+			assert(tuple->type == GSHKL_ARR);
+		}
 
 		line to_render_line;
 		to_render_line.data = strndup(loop_meat.start, loop_meat.len);
 		to_render_line.size = loop_meat.len;
 
-		/* Now we start iterating through values in our context, looking for ARR
-		 * types that have the correct name. */
-		vector *current_values = ctext->values;
+		vector *cur_vector_p = tuple->value.arr;
 
-		/* We linearly search through our variables because I don't have
-		 * a hash map. C is "fast enough" */
-		int matched_at_least_once = 0;
-		unsigned int i;
-		for (i = 0; i < current_values->count; i++) {
-			const greshunkel_tuple *tuple = vector_get(current_values, i);
-			if (tuple->type != GSHKL_ARR)
-				continue;
+		/* This is the thing we're going to render over and over and over again. */
+		char *loop_variable_name_rendered = strndup(loop_variable.start, loop_variable.len);
 
-			/* Found an array. */
-			assert(tuple->name != NULL);
+		/* Now we loop through the array incredulously. */
+		unsigned int j;
+		for (j = 0; j < cur_vector_p->count; j++) {
+			const greshunkel_tuple *current_loop_var = vector_get(cur_vector_p, j);
+			/* TODO: For now, only strings are supported in arrays. */
+			assert(current_loop_var->type == GSHKL_STR);
 
-			int strcmp_result = strncmp(tuple->name, variable_name.start, strlen(tuple->name));
-			if (tuple->type == GSHKL_ARR && strcmp_result == 0) {
-				matched_at_least_once = 1;
+			/* Recurse contexts until my fucking mind melts. */
+			greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
+			gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
+			line rendered_piece = _interpolate_line(_temp_ctext, to_render_line);
+			gshkl_free_context(_temp_ctext);
 
-				vector *cur_vector_p = tuple->value.arr;
-				/* Now we loop through the array incredulously. */
-				unsigned int j;
-				for (j = 0; j < cur_vector_p->count; j++) {
-					const greshunkel_tuple *current_loop_var = vector_get(cur_vector_p, j);
-					/* TODO: For now, only strings are supported in arrays. */
-					assert(current_loop_var->type == GSHKL_STR);
-
-					/* Recurse contexts until my fucking mind melts. */
-					greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
-					gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
-					line rendered_piece = _interpolate_line(_temp_ctext, to_render_line);
-					gshkl_free_context(_temp_ctext);
-
-					const size_t old_size = to_return.size;
-					to_return.size += rendered_piece.size;
-					to_return.data = realloc(to_return.data, to_return.size);
-					strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
-					free(rendered_piece.data);
-				}
-				break;
-			}
-
+			const size_t old_size = to_return.size;
+			to_return.size += rendered_piece.size;
+			to_return.data = realloc(to_return.data, to_return.size);
+			strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
+			free(rendered_piece.data);
 		}
 
 		free(loop_variable_name_rendered);
 		free(to_render_line.data);
-
-		if (matched_at_least_once != 1) {
-			printf("Did not match a variable that needed to be matched.\n");
-			printf("Line: %s\n", buf);
-			assert(matched_at_least_once == 1);
-		}
 	}
 
 	return to_return;
