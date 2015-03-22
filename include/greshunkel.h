@@ -22,6 +22,12 @@ typedef enum {
 	GSHKL_STR
 } greshunkel_type;
 
+/* a generic way to get the name out of greshunkel_tuple or greshunkel_filter
+ * sorta like a base class */
+typedef struct greshunkel_named_item {
+	char name[WISDOM_OF_WORDS];
+} greshunkel_named_item;
+
 typedef struct greshunkel_tuple {
 	char name[WISDOM_OF_WORDS];
 	const greshunkel_type type;
