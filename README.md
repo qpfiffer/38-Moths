@@ -17,3 +17,8 @@ sudo make install
 # Usage
 
 See the examples directory. More to come later.
+
+# Tests
+
+Currently there are only tests for the `GRESHUNKEL` templating language. The
+`Makefile` spits out a `greshunkel_test` binary that you can run.
