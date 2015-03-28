@@ -29,7 +29,7 @@
 #include "grengine.h"
 #include "greshunkel.h"
 
-static mqd_t accepted_socket_queue = 0;
+#define ACCEPTED_SOCKET_QUEUE_NAME "/mothsqueue"
 
 typedef struct acceptor_arg {
 	const int main_sock_fd;
@@ -41,8 +41,24 @@ typedef struct worker_arg {
 } worker_arg;
 
 static void *acceptor(void *arg) {
+	mqd_t accepted_socket_queue = 0;
 	const acceptor_arg *args = arg;
 	const int main_sock_fd = args->main_sock_fd;
+
+	struct mq_attr asq_attr = {
+		.mq_flags = 0,
+		.mq_maxmsg = 10,
+		.mq_msgsize = sizeof(int), /* We're passing around file descriptors */
+		.mq_curmsgs = 0
+	};
+
+	accepted_socket_queue = mq_open(ACCEPTED_SOCKET_QUEUE_NAME, O_WRONLY | O_CREAT, 0644, &asq_attr);
+	if (accepted_socket_queue == -1) {
+		log_msg(LOG_ERR, "Could not open accepted_socket_queue.");
+		perror("Acceptor: ");
+		return NULL;
+	}
+
 	while(1) {
 		struct sockaddr_storage their_addr = {0};
 		socklen_t sin_size = sizeof(their_addr);
@@ -66,22 +82,36 @@ static void *acceptor(void *arg) {
 }
 
 static void *worker(void *arg) {
+	mqd_t accepted_socket_queue = 0;
 	const worker_arg *args = arg;
 	const size_t num_routes = args->num_routes;
 	const route *all_routes = args->all_routes;
+
+	accepted_socket_queue = mq_open(ACCEPTED_SOCKET_QUEUE_NAME, O_RDONLY);
+	if (accepted_socket_queue == -1) {
+		log_msg(LOG_ERR, "Could not open accepted_socket_queue.");
+		perror("Worker: ");
+		return NULL;
+	}
+
 	while(1) {
 		int new_fd = 0;
 		ssize_t msg_size = mq_receive(accepted_socket_queue, (char *)&new_fd, sizeof(int), NULL);
 
 		if (msg_size == -1) {
 			log_msg(LOG_ERR, "Could not read from accepted_socket_queue.");
+			break;
 		} else if (new_fd == -1) {
 			log_msg(LOG_ERR, "Got bogus FD from accepted_socket_queue.");
+			break;
 		} else {
 			respond(new_fd, all_routes, num_routes);
 			close(new_fd);
 		}
 	}
+
+	mq_close(accepted_socket_queue);
+
 	return NULL;
 }
 
@@ -122,11 +152,14 @@ int http_serve(int main_sock_fd,
 	}
 	log_msg(LOG_FUN, "Listening on http://localhost:%i/", port);
 
-	accepted_socket_queue = mq_open("accepted_socket_queue", O_RDWR);
-	if (accepted_socket_queue == -1) {
-		log_msg(LOG_ERR, "Could not open accepted_socket_queue.");
+	struct acceptor_arg args = {
+		.main_sock_fd = main_sock_fd,
+	};
+
+	if (pthread_create(&acceptor_enqueuer, NULL, acceptor, &args) != 0) {
 		goto error;
 	}
+	log_msg(LOG_INFO, "Acceptor thread started.");
 
 	int i;
 	for (i = 0; i < num_threads; i++) {
@@ -140,15 +173,6 @@ int http_serve(int main_sock_fd,
 		log_msg(LOG_INFO, "Worker thread %i started.", i);
 	}
 
-	struct acceptor_arg args = {
-		.main_sock_fd = main_sock_fd,
-	};
-
-	if (pthread_create(&acceptor_enqueuer, NULL, acceptor, &args) != 0) {
-		goto error;
-	}
-	log_msg(LOG_INFO, "Acceptor thread started.");
-
 	for (i = 0; i < num_threads; i++) {
 		pthread_join(workers[i], NULL);
 		log_msg(LOG_INFO, "Worker thread %i stopped.", i);
@@ -156,14 +180,11 @@ int http_serve(int main_sock_fd,
 	pthread_join(acceptor_enqueuer, NULL);
 	log_msg(LOG_INFO, "Acceptor thread stopped.");
 
-	mq_close(accepted_socket_queue);
-	mq_unlink("accepted_socket_queue");
-
 	close(main_sock_fd);
 	return 0;
 
 error:
-	perror("Socket error");
+	perror("Server error: ");
 	close(main_sock_fd);
 	return rc;
 }
