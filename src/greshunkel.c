@@ -309,7 +309,12 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line) {
 		assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
 
 		const greshunkel_tuple *tuple;
-		if ((tuple = find_needle(ctext, inner_match.start, 1)) && tuple->type == GSHKL_STR) {
+		/* Copy the string here so we only get the match, not everything after it. */
+		char just_match_str[inner_match.len + 1];
+		just_match_str[inner_match.len] = '\0';
+		strncpy(just_match_str, inner_match.start, inner_match.len);
+
+		if ((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_STR) {
 			vishnu(&new_line_to_add, match[0], tuple->value.str, operating_line);
 		} else {
 			/* Blow up if we had a variable that wasn't in the context. */
