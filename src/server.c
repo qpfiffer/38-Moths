@@ -107,8 +107,10 @@ static void *worker(void *arg) {
 			log_msg(LOG_ERR, "Worker %i: Got bogus FD from accepted_socket_queue.", worker_ident);
 			break;
 		} else {
+			log_msg(LOG_FUN, "Worker %i: Handling response.", worker_ident);
 			respond(new_fd, all_routes, num_routes);
 			close(new_fd);
+			log_msg(LOG_FUN, "Worker %i: Response handled.", worker_ident);
 		}
 	}
 
