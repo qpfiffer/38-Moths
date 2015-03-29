@@ -254,7 +254,7 @@ static void log_request(const http_request *request, const http_response *respon
 }
 
 int respond(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
-	char to_read[MAX_READ_LEN] = {0};
+	char *to_read = calloc(1, MAX_READ_LEN);
 	char *actual_response = NULL;
 	http_response response = {
 		.mimetype = {0},
@@ -409,6 +409,7 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		matching_route->cleanup(response_code, &response);
 	}
 	free(actual_response);
+	free(to_read);
 
 	return 0;
 
@@ -416,5 +417,6 @@ error:
 	if (matching_route != NULL)
 		matching_route->cleanup(500, &response);
 	free(actual_response);
+	free(to_read);
 	return -1;
 }

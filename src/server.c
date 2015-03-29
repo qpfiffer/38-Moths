@@ -48,7 +48,7 @@ static void *acceptor(void *arg) {
 
 	struct mq_attr asq_attr = {
 		.mq_flags = 0,
-		.mq_maxmsg = 10,
+		.mq_maxmsg = 64,
 		.mq_msgsize = sizeof(int), /* We're passing around file descriptors */
 		.mq_curmsgs = 0
 	};
