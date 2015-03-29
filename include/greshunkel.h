@@ -1,5 +1,6 @@
 // vim: noet ts=4 sw=4
 #pragma once
+#include <regex.h>
 #include <stdlib.h>
 #include "vector.h"
 
@@ -45,6 +46,14 @@ typedef struct greshunkel_ctext {
 	vector *filter_functions;
 	const struct greshunkel_ctext *parent;
 } greshunkel_ctext;
+
+/* Compiled egex vars. */
+struct compiled_regex {
+	regex_t c_var_regex;
+	regex_t c_loop_regex;
+	regex_t c_filter_regex;
+	regex_t c_include_regex;
+};
 
 /* Build and destroy contexts: */
 greshunkel_ctext *gshkl_init_context();
