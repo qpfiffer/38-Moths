@@ -41,11 +41,8 @@ typedef struct worker_arg {
 	const int worker_ident;
 } worker_arg;
 
-static void *acceptor(void *arg) {
-	mqd_t accepted_socket_queue = 0;
-	const acceptor_arg *args = arg;
-	const int main_sock_fd = args->main_sock_fd;
-
+static inline mqd_t _open_queue(int flags) {
+	(void) flags;
 	struct mq_attr asq_attr = {
 		.mq_flags = 0,
 		.mq_maxmsg = 64,
@@ -53,7 +50,18 @@ static void *acceptor(void *arg) {
 		.mq_curmsgs = 0
 	};
 
-	accepted_socket_queue = mq_open(ACCEPTED_SOCKET_QUEUE_NAME, O_WRONLY | O_CREAT, 0644, &asq_attr);
+	mqd_t to_return = mq_open(ACCEPTED_SOCKET_QUEUE_NAME, O_WRONLY | O_CREAT, 0644, &asq_attr);
+	if (to_return == -1)
+		perror("WHAT");
+
+	return to_return;
+}
+static void *acceptor(void *arg) {
+	mqd_t accepted_socket_queue = 0;
+	const acceptor_arg *args = arg;
+	const int main_sock_fd = args->main_sock_fd;
+
+	accepted_socket_queue = _open_queue(O_WRONLY);
 	if (accepted_socket_queue == -1) {
 		log_msg(LOG_ERR, "Acceptor: Could not open accepted_socket_queue.");
 		perror("Acceptor: ");
@@ -112,6 +120,14 @@ static void *worker(void *arg) {
 			close(new_fd);
 			log_msg(LOG_FUN, "Worker %i: Response handled.", worker_ident);
 		}
+
+		struct mq_attr attr = {0};
+		if (mq_getattr(accepted_socket_queue, &attr) == 0) {
+			log_msg(LOG_INFO, "Acceptor: Number of items on the queue: %i", attr.mq_curmsgs);
+		} else {
+			log_msg(LOG_INFO, "Acceptor: Could not pull items from queue.");
+			perror("Acceptor MQ Problem: ");
+		}
 	}
 
 	mq_close(accepted_socket_queue);
@@ -156,6 +172,21 @@ int http_serve(int main_sock_fd,
 	}
 	log_msg(LOG_FUN, "Listening on http://localhost:%i/", port);
 
+	/* Purge the queue if it already exists by unlinking it. Otherwise we get
+	 * stale messages.
+	 */
+	if (mq_unlink(ACCEPTED_SOCKET_QUEUE_NAME) == 0) {
+		log_msg(LOG_INFO, "Purged old socket queue.");
+	}
+
+	/* We precreate the queue here to guarantee that everyone else will have access to it. */
+	mqd_t preopened_queue = _open_queue(O_RDWR | O_CREAT);
+	if (preopened_queue == -1) {
+		log_msg(LOG_ERR, "Could not preopen accepted_socket_queue.");
+		perror("Main Thread");
+		goto error;
+	}
+
 	struct acceptor_arg args = {
 		.main_sock_fd = main_sock_fd,
 	};
@@ -178,6 +209,11 @@ int http_serve(int main_sock_fd,
 		log_msg(LOG_INFO, "Worker thread %i started.", i);
 	}
 
+	if (mq_close(preopened_queue) == -1) {
+		log_msg(LOG_ERR, "Main thread: Could not close preopened queue.");
+		goto error;
+	}
+
 	for (i = 0; i < num_threads; i++) {
 		pthread_join(workers[i], NULL);
 		log_msg(LOG_INFO, "Worker thread %i stopped.", i);
@@ -189,7 +225,7 @@ int http_serve(int main_sock_fd,
 	return 0;
 
 error:
-	perror("Server error: ");
+	perror("Server error");
 	close(main_sock_fd);
 	return rc;
 }
