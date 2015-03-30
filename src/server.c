@@ -45,7 +45,7 @@ static inline mqd_t _open_queue(int flags) {
 	(void) flags;
 	struct mq_attr asq_attr = {
 		.mq_flags = 0,
-		.mq_maxmsg = 64,
+		.mq_maxmsg = 10,
 		.mq_msgsize = sizeof(int), /* We're passing around file descriptors */
 		.mq_curmsgs = 0
 	};
