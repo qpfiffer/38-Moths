@@ -23,7 +23,8 @@
 #include <unistd.h>
 #include <time.h>
 
-#include "http.h"
+#include <oleg-http/http.h>
+
 #include "logging.h"
 #include "server.h"
 #include "grengine.h"

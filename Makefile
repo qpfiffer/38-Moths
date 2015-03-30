@@ -2,7 +2,7 @@ VERSION=0.1
 CFLAGS=-Werror -Wno-missing-field-initializers -Wextra -Wall -O2 -g3
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
-COMMON_OBJ=utils.o vector.o logging.o http.o
+COMMON_OBJ=utils.o vector.o logging.o
 NAME=lib38moths.so
 
 PREFIX?=/usr/local
