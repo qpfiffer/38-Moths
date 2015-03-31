@@ -251,7 +251,8 @@ static const void *find_needle(const greshunkel_ctext *ctext, const char *needle
 		for (i = 0; i < current_vector->count; i++) {
 			const greshunkel_named_item *item = (greshunkel_named_item *)vector_get(current_vector, i);
 			assert(item->name != NULL);
-			if (strncmp(item->name, needle, strlen(item->name)) == 0) {
+			const size_t larger = strlen(item->name) > strlen(needle) ? strlen(item->name) : strlen(needle);
+			if (strncmp(item->name, needle, larger) == 0) {
 				return item;
 			}
 		}
@@ -271,7 +272,11 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const st
 		const match_t argument = filter_matches[2];
 
 		const greshunkel_filter *filter;
-		if ((filter = find_needle(ctext, function_name.start, 0))) {
+		char just_match_str[function_name.len + 1];
+		just_match_str[function_name.len] = '\0';
+		strncpy(just_match_str, function_name.start, function_name.len);
+
+		if ((filter = find_needle(ctext, just_match_str, 0))) {
 
 			/* Render the argument out so we can pass it to the filter function. */
 			char *rendered_argument = strndup(argument.start, argument.len);
@@ -371,7 +376,11 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		*num_read = loop_meat.rm_eo + strlen("xXx BBL xXx");
 
 		const greshunkel_tuple *tuple;
-		if (!((tuple = find_needle(ctext, variable_name.start, 1)) && tuple->type == GSHKL_ARR)) {
+		char just_match_str[variable_name.len + 1];
+		just_match_str[variable_name.len] = '\0';
+		strncpy(just_match_str, variable_name.start, variable_name.len);
+
+		if (!((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_ARR)) {
 			printf("Did not match a variable that needed to be matched.\n");
 			printf("Line: %s\n", buf);
 			assert(tuple != NULL);
