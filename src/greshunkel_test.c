@@ -1,4 +1,5 @@
 // vim: noet ts=4 sw=4
+#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #define DEBUG
@@ -35,9 +36,7 @@ char *return_hello(const char *arg) {
 	return "HELLO!";
 }
 
-int main(int argc, char *argv[]) {
-	UNUSED(argc);
-	UNUSED(argv);
+void test1() {
 	size_t new_size = 0;
 
 	greshunkel_ctext *ctext = gshkl_init_context();
@@ -65,6 +64,33 @@ int main(int argc, char *argv[]) {
 
 	printf("%s\n", rendered);
 	free(rendered);
+}
+
+void test2() {
+	const char templ_a[] = "xXx @image xXx";
+	const char templ_b[] = "xXx @image_date xXx";
+
+	greshunkel_ctext *ctext = gshkl_init_context();
+	gshkl_add_string(ctext, "image", "test");
+	gshkl_add_string(ctext, "image_date", "definitely_not_test");
+
+	size_t a_siz = 0, b_siz = 0;
+	char *a_rendered = gshkl_render(ctext, templ_a, strlen(templ_a), &a_siz);
+	char *b_rendered = gshkl_render(ctext, templ_b, strlen(templ_b), &b_siz);
+
+	int ret = strcmp(a_rendered, b_rendered);
+	assert(ret != 0);
+
+	free(a_rendered);
+	free(b_rendered);
+}
+
+int main(int argc, char *argv[]) {
+	UNUSED(argc);
+	UNUSED(argv);
+
+	test1();
+	test2();
 
 	return 0;
 }
