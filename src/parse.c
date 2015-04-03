@@ -79,10 +79,9 @@ range_header parse_range_header(const char *range_query) {
 	const size_t second_num = _sn;
 
 	if (second_num < first_num) {
-		log_msg(LOG_WARN, "Malformed range query, limit smaller than offset: %s", range_query);
 		range_header rng = {
 			.limit = 0,
-			.offset = 0
+			.offset = first_num
 		};
 		return rng;
 	}
