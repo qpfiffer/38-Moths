@@ -1,8 +1,7 @@
 // vim: noet ts=4 sw=4
 #include <string.h>
 
-#include <38-moths/grengine.h>
-#include <38-moths/server.h>
+#include <38-moths/38-moths.h>
 
 int main_sock_fd;
 

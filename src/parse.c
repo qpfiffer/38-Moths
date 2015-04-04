@@ -12,6 +12,28 @@
 #include "parse.h"
 #include "logging.h"
 
+/* Pulled from here: http://stackoverflow.com/a/25705264 */
+static char *strnstr(const char *haystack, const char *needle, size_t len) {
+	int i;
+	size_t needle_len;
+
+	/* segfault here if needle is not NULL terminated */
+	if (0 == (needle_len = strlen(needle)))
+		return (char *)haystack;
+
+	/* Limit the search if haystack is shorter than 'len' */
+	len = strnlen(haystack, len);
+
+	for (i=0; i<(int)(len-needle_len); i++)
+	{
+		if ((haystack[0] == needle[0]) && (0 == strncmp(haystack, needle, needle_len)))
+			return (char *)haystack;
+
+		haystack++;
+	}
+	return NULL;
+}
+
 range_header parse_range_header(const char *range_query) {
 	/* bytes=0- */
 	/* bytes=12345-55555 */
@@ -92,4 +114,22 @@ range_header parse_range_header(const char *range_query) {
 	};
 
 	return rng;
+}
+
+char *get_header_value(const char *request, const size_t request_siz, const char header[static 1]) {
+	char *data = NULL;
+	const char *header_loc = strnstr(request, header, request_siz);
+	if (!header_loc)
+		return NULL;
+
+	const char *header_value_start = header_loc + strlen(header) + strlen(": ");
+	const char *header_value_end = strstr(header_loc, "\r\n");
+	if (!header_value_end)
+		return NULL;
+
+	const size_t header_value_size = header_value_end - header_value_start + 1;
+	data = calloc(header_value_size, sizeof(char));
+	strncpy(data, header_value_start, header_value_size);
+
+	return data;
 }

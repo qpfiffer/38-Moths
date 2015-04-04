@@ -2,9 +2,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <38-moths/greshunkel.h>
-#include <38-moths/grengine.h>
-#include <38-moths/server.h>
+#include <38-moths/38-moths.h>
 
 time_t start_time;
 int main_sock_fd;

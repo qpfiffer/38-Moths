@@ -9,3 +9,5 @@ typedef struct range_header {
 
 /* FUCK THE MUTEABLE STATE */
 range_header parse_range_header(const char *range_query);
+
+char *get_header_value(const char *request, const size_t request_siz, const char header[static 1]);
