@@ -20,8 +20,7 @@ sudo make install
 ```C
 #include <string.h>
 
-#include <38-moths/grengine.h>
-#include <38-moths/server.h>
+#include <38-moths/38-moths.h>
 
 int main_sock_fd;
 
