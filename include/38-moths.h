@@ -1,7 +1,10 @@
 // vim: noet ts=4 sw=4
 #pragma once
 
-#define VERSION 0.1
+/* xXx DEFINE=VERSION xXx
+* xXx DESCRIPTION=The current version of the 38-Moths. xXx
+*/
+#define VERSION "0.1"
 
 #include "logging.h"
 #include "utils.h"
