@@ -1,6 +1,8 @@
 // vim: noet ts=4 sw=4
 #pragma once
 
+#define VERSION 0.1
+
 #include "logging.h"
 #include "utils.h"
 #include "vector.h"
