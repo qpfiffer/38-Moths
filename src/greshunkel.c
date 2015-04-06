@@ -9,6 +9,15 @@
 
 #include "greshunkel.h"
 
+/* Compiled regex vars. */
+struct compiled_regex {
+	regex_t c_var_regex;
+	regex_t c_loop_regex;
+	regex_t c_filter_regex;
+	regex_t c_include_regex;
+};
+
+
 struct line {
 	size_t size;
 	char *data;
