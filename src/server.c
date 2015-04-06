@@ -136,7 +136,7 @@ static void *worker(void *arg) {
 	return NULL;
 }
 
-int http_serve(int main_sock_fd,
+int http_serve(int *main_sock_fd,
 		const int num_threads,
 		const struct route *routes,
 		const size_t num_routes) {
@@ -145,14 +145,14 @@ int http_serve(int main_sock_fd,
 	pthread_t acceptor_enqueuer;
 
 	int rc = -1;
-	main_sock_fd = socket(PF_INET, SOCK_STREAM, 0);
-	if (main_sock_fd <= 0) {
+	*main_sock_fd = socket(PF_INET, SOCK_STREAM, 0);
+	if (*main_sock_fd <= 0) {
 		log_msg(LOG_ERR, "Could not create main socket.");
 		goto error;
 	}
 
 	int opt = 1;
-	setsockopt(main_sock_fd, SOL_SOCKET, SO_REUSEADDR, (void*) &opt, sizeof(opt));
+	setsockopt(*main_sock_fd, SOL_SOCKET, SO_REUSEADDR, (void*) &opt, sizeof(opt));
 
 	const int port = 8080;
 	struct sockaddr_in hints = {0};
@@ -160,13 +160,13 @@ int http_serve(int main_sock_fd,
 	hints.sin_port			 = htons(port);
 	hints.sin_addr.s_addr	 = htonl(INADDR_ANY);
 
-	rc = bind(main_sock_fd, (struct sockaddr *)&hints, sizeof(hints));
+	rc = bind(*main_sock_fd, (struct sockaddr *)&hints, sizeof(hints));
 	if (rc < 0) {
 		log_msg(LOG_ERR, "Could not bind main socket.");
 		goto error;
 	}
 
-	rc = listen(main_sock_fd, 0);
+	rc = listen(*main_sock_fd, 0);
 	if (rc < 0) {
 		log_msg(LOG_ERR, "Could not listen on main socket.");
 		goto error;
@@ -189,7 +189,7 @@ int http_serve(int main_sock_fd,
 	}
 
 	struct acceptor_arg args = {
-		.main_sock_fd = main_sock_fd,
+		.main_sock_fd = *main_sock_fd,
 	};
 
 	if (pthread_create(&acceptor_enqueuer, NULL, acceptor, &args) != 0) {
@@ -222,12 +222,12 @@ int http_serve(int main_sock_fd,
 	pthread_join(acceptor_enqueuer, NULL);
 	log_msg(LOG_INFO, "Acceptor thread stopped.");
 
-	close(main_sock_fd);
+	close(*main_sock_fd);
 	return 0;
 
 error:
 	perror("Server error");
-	close(main_sock_fd);
+	close(*main_sock_fd);
 	return rc;
 }
 
