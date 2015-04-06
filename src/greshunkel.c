@@ -181,7 +181,7 @@ static inline void _gshkl_free_arr(greshunkel_tuple *to_free) {
 	vector_free((vector *)to_free->value.arr);
 }
 
-int gshkl_free_context(greshunkel_ctext *ctext) {
+void gshkl_free_context(greshunkel_ctext *ctext) {
 	unsigned int i;
 	for (i = 0; i < ctext->values->count; i++) {
 		greshunkel_tuple *next = (greshunkel_tuple *)vector_get(ctext->values, i);
@@ -194,7 +194,6 @@ int gshkl_free_context(greshunkel_ctext *ctext) {
 	vector_free(ctext->filter_functions);
 
 	free(ctext);
-	return 0;
 }
 
 static line read_line(const char *buf) {

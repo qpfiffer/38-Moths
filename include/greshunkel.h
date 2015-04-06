@@ -85,9 +85,17 @@ typedef struct greshunkel_ctext {
 	const struct greshunkel_ctext *parent;
 } greshunkel_ctext;
 
-/* Build and destroy contexts: */
+/* xXx FUNCTION=gshkl_init_context xXx
+ * xXx DESCRIPTION=Used to create a new, empty GRESHUNKEL context. xXx
+ * xXx RETURNS=A new greshunkel context. xXx
+ */
 greshunkel_ctext *gshkl_init_context();
-int gshkl_free_context(greshunkel_ctext *ctext);
+
+/* xXx FUNCTION=gshkl_free_context xXx
+ * xXx DESCRIPTION=Frees an cleans up a previously created context. xXx
+ * xXx RETURNS=Nothing. xXx
+ */
+void gshkl_free_context(greshunkel_ctext *ctext);
 
 /* Add things to the contexts: */
 int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const char *value);
