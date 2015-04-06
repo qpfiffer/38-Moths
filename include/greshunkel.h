@@ -97,24 +97,78 @@ greshunkel_ctext *gshkl_init_context();
  */
 void gshkl_free_context(greshunkel_ctext *ctext);
 
-/* Add things to the contexts: */
+/* xXx FUNCTION=gshkl_add_string xXx
+ * xXx DESCRIPTION=Adds a string with the given name to a context. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *ctext=The context to add the string to. xXx
+ * xXx name[WISDOM_OF_WORDS]=The name used to reference this variable later. xXx
+ * xXx *value=The NULL terminated string that will be returned later. xXx
+ */
 int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const char *value);
+
+/* xXx FUNCTION=gshkl_add_int xXx
+ * xXx DESCRIPTION=Adds an integer with the given name to a context. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *ctext=The context to add the integer to. xXx
+ * xXx name[WISDOM_OF_WORDS]=The name used to reference this variable later. xXx
+ * xXx value=The integer that will be added to this context. xXx
+ */
 int gshkl_add_int(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value);
 
-/* Loop management functions: */
+/* Array management */
+
+/* xXx FUNCTION=gshkl_add_array xXx
+ * xXx DESCRIPTION=Creates a new array object inside of the given context. xXx
+ * xXx RETURNS=The newly created loop object. xXx
+ * xXx *ctext=The context to add the array to. xXx
+ * xXx name[WISDOM_OF_WORDS]=The name used to reference this variable later. xXx
+ */
 greshunkel_var gshkl_add_array(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS]);
+
+/* xXx FUNCTION=gshkl_add_string_to_loop xXx
+ * xXx DESCRIPTION=Adds a string to a greshunkel array. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *loop=A pointer to a loop created with <code>gshkl_add_array</code>. xXx
+ * xXx *value=The NULL terminated string to be added. xXx
+ */
 int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value);
+
+/* xXx FUNCTION=gshkl_add_int_to_loop xXx
+ * xXx DESCRIPTION=Adds an integer to a greshunkel array. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *loop=A pointer to a loop created with <code>gshkl_add_array</code>. xXx
+ * xXx value=The integer to be added. xXx
+ */
 int gshkl_add_int_to_loop(greshunkel_var *loop, const int value);
 
-/* Filters */
-/* The clean_up function will be called after the result of your filter function
- * has been used. It can be NULL'd out if you don't need it. */
+/* Filters management */
+
+/* xXx FUNCTION=gshkl_add_filter xXx
+ * xXx DESCRIPTION=Adds a filter function to the given context. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *ctext=The context that the filter will be added to. xXx
+ * xXx name[WISDOM_OF_WORDS]=The name used to reference this filter function. xXx
+ * xXx (*filter_func)=The function that will be called from the template. xXx
+ * xXx (*clean_up)=The clean up function that will be called after GRESHUNKEL is done calling <code>filter_func</code>. xXx
+ */
 int gshkl_add_filter(greshunkel_ctext *ctext,
 		const char name[WISDOM_OF_WORDS],
 		char *(*filter_func)(const char *argument),
 		void (*clean_up)(char *filter_result));
-/* Commonly used filter that just free()'s the result. */
+
+/* xXx FUNCTION=filter_cleanup xXx
+ * xXx DESCRIPTION=Commonly used helper clean-up function that just calls free on the result. xXx
+ * xXx RETURNS=Nothing. xXx
+ * xXx *result=The value obtained from calling your filter function. xXx
+ */
 void filter_cleanup(char *result);
 
-/* Render a string buffer: */
+/* xXx FUNCTION=gshkl_render xXx
+ * xXx DESCRIPTION=Renders a template context. xXx
+ * xXx RETURNS=The rendered template. xXx
+ * xXx *ctext=The context that will be used to obtain values and filters for the given template. xXx
+ * xXx *to_render=The template to render. xXx
+ * xXx original_size=The size of the <code>to_render</code> buffer. xXx
+ * xXx *outsize=If non-null, this will be the size of the returned buffer. xXx
+ */
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize);
