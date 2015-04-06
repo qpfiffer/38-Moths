@@ -54,6 +54,14 @@ typedef struct {
 	void *extra_data;
 } http_response;
 
+/* xXx STRUCT=route xXx
+ * xXx DESCRIPTION=An array of these is how 38-Moths knows how to route requests. xXx
+ * xXx verb[VERB_SIZE]=The verb that this route will handle. xXx
+ * xXx name[64]=The name of the route. Used only logging. xXx
+ * xXx route_match[256]=The POSIX regular expression used to match the route to your handler. xXx
+ * xXx (*handler)=A function pointer to your route handler. xXx
+ * xXx (*cleanup)=If your route needs to do any cleanup (eg. de-allocating memory), this function will becalled when 38-Moths is done with it. xXx
+ */
 typedef struct route {
 	char verb[VERB_SIZE];
 	char name[64];
@@ -63,38 +71,40 @@ typedef struct route {
 	void (*cleanup)(const int status_code, http_response *response);
 } route;
 
-
-/* Default 404 handler. */
-/* ------------------------------------------------------------------------ */
-int r_404_handler(const http_request *request, http_response *response);
-static const route r_404_route = {
-	.verb = "GET",
-	.route_match = "^.*$",
-	.handler = (&r_404_handler),
-	.cleanup = NULL
-};
-
-/* Utility functions for command handler tasks. */
-/* ------------------------------------------------------------------------ */
-
-/* mmap()'s a file into memory and fills out the extra_data param on
- * the response object with a struct st. This needs to be present
- * to be handled later by mmap_cleanup.
+/* xXx FUNCTION=mmap_file xXx
+ * xXx DESCRIPTION=The primary way of serving static assets in 38-Moths. mmap()'s a file into memory and writes it to the requester. xXx
+ * xXx *file_path=The file to mmap(). xXx
+ * xXx *response=The <code>http_response</code> object your handler was passed. xXx
  */
 int mmap_file(const char *file_path, http_response *response);
-/* Renders a file with the given context. */
-int render_file(const struct greshunkel_ctext *ctext, const char *file_path, http_response *response);
-/* Helper function that blindly guesses the mimetype based on the file extension. */
-void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response);
 
-/* Cleanup functions used after handlers have made a bunch of bullshit: */
+/* xXx FUNCTION=render_file xXx
+ * xXx DESCRIPTION=The easiest way to render a file with GRESHUNKEL. xXx
+ * xXx *ctext=The context you want your file to have. This should contain all variables, loops, etc. xXx
+ * xXx *file_path=The template to render. xXx
+ * xXx *response=The <code>http_response</code> object your handler was passed. xXx
+ */
+int render_file(const struct greshunkel_ctext *ctext, const char *file_path, http_response *response);
+
+/* xXx FUNCTION=heap_cleanup xXx
+ * xXx DESCRIPTION=Simple function that <code>free()</code>'s memory in <code>out</code>. xXx
+ * xXx status_code=The status code returned from the handler. xXx
+ * xXx *response=The <code>http_response</code> object returned from the handler. xXx
+ */
 void heap_cleanup(const int status_code, http_response *response);
+
+/* xXx FUNCTION=mmap_cleanup xXx
+ * xXx DESCRIPTION=The cleanup handler for <code>mmap_file</code>. Expects <code>*extradata</code> to be a <code>struct stat</code> object. xXx
+ * xXx status_code=The status code returned from the handler. xXx
+ * xXx *response=The <code>http_response</code> object returned from the handler. xXx
+ */
 void mmap_cleanup(const int status_code, http_response *response);
 
-/* Parses a raw bytestream into an http_request object. */
-int parse_request(const char to_read[MAX_READ_LEN], http_request *out);
-/* Takes an accepted socket, an array of routes and the number of handlers in said array,
- * then calls the first handler to match the requested resource. It is responsible for
- * writing the result of the handler to the socket. */
+/* xXx FUNCTION=respond xXx
+ * xXx DESCRIPTION=This is how the HTTP server writes to requester's file sockets. xXx
+ * xXx accept_fd=The successfully <code>accept(2)</code>'d file descriptor for the requester's socket. xXx
+ * xXx *all_routes=The array of all routes for your application. xXx
+ * xXx route_num_elements=The number of routes in <code>*all_routes</code>. xXx
+ */
 int respond(const int accept_fd, const route *all_routes, const size_t route_num_elements);
 

@@ -59,6 +59,15 @@ struct {
 	{NULL, NULL}
 };
 
+/* Default 404 handler. */
+int r_404_handler(const http_request *request, http_response *response);
+static const route r_404_route = {
+	.verb = "GET",
+	.route_match = "^.*$",
+	.handler = (&r_404_handler),
+	.cleanup = NULL
+};
+
 /* This is used to map between the return codes of responses to their headers: */
 typedef struct {
 	const int code;
@@ -86,7 +95,7 @@ int r_404_handler(const http_request *request, http_response *response) {
 	return 404;
 }
 
-void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response) {
+static void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response) {
 	int i;
 	char *type = "application/octet-stream";
 	for (i = 0; mimetype_mapping[i].ext; i++) {
@@ -208,7 +217,7 @@ void mmap_cleanup(const int status_code, http_response *response) {
 	}
 }
 
-int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
+static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
 	/* Find the verb */
 	const char *verb_end = strnstr(to_read, " ", MAX_READ_LEN);
 	if (verb_end == NULL)
