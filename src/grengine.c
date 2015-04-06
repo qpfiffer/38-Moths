@@ -60,6 +60,11 @@ struct {
 };
 
 /* This is used to map between the return codes of responses to their headers: */
+typedef struct {
+	const int code;
+	const char *message;
+} code_to_message;
+
 static const code_to_message response_headers[] = {
 	{200, r_200},
 	{206, r_206},
@@ -259,7 +264,6 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	char *actual_response = NULL;
 	http_response response = {
 		.mimetype = {0},
-		.byte_range = {0},
 		0
 	};
 	const route *matching_route = NULL;
@@ -318,18 +322,6 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	log_msg(LOG_INFO, "Calling handler for %s.", matching_route->name);
 	int response_code = matching_route->handler(&request, &response);
 
-	/* Figure out if this thing needs to be partial */
-	char *range_header_value = get_header_value(request.full_header, strlen(request.full_header), "Range");
-	if (range_header_value && RESPONSE_OK(response_code)) {
-		range_header range = parse_range_header(range_header_value);
-		free(range_header_value);
-
-		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", range.limit, range.offset);
-		memcpy(&response.byte_range, &range, sizeof(response.byte_range));
-
-		response_code = 206;
-	}
-
 	if (response_code == 404 && (response.outsize == 0 || response.out == NULL)) {
 		response_code = r_404_handler(&request, &response);
 	} else {
@@ -358,6 +350,12 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	size_t header_size = 0;
 	size_t actual_response_siz = 0;
 
+	/* Figure out if this thing needs to be partial */
+	char *range_header_value = get_header_value(request.full_header, strlen(request.full_header), "Range");
+	if (range_header_value && RESPONSE_OK(response_code)) {
+		response_code = 206;
+	}
+
 	if (response_code == 200 || response_code == 404) {
 		const size_t integer_length = UINT_LEN(response.outsize);
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
@@ -373,9 +371,14 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		memcpy(actual_response + header_size, response.out, response.outsize);
 	} else if (response_code == 206) {
 		/* Byte range queries have some extra shit. */
-		const size_t c_offset = response.byte_range.offset;
-		const size_t c_limit = response.byte_range.limit == 0 ?
-			(response.outsize - c_offset) - 1 : (response.byte_range.limit - c_offset) - 1;
+		range_header byte_range = parse_range_header(range_header_value);
+		free(range_header_value);
+
+		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", byte_range.limit, byte_range.offset);
+
+		const size_t c_offset = byte_range.offset;
+		const size_t c_limit = byte_range.limit == 0 ?
+			(response.outsize - c_offset) - 1 : (byte_range.limit - c_offset) - 1;
 		const size_t full_size = c_limit + 1;
 		const size_t integer_length = UINT_LEN(full_size);
 

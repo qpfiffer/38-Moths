@@ -37,3 +37,9 @@ install: lib
 	@install ./include/*.h $(INSTALL_INCLUDE)
 	@ldconfig $(INSTALL_LIB)
 	@echo "38-moths installed to $(PREFIX) :^)."
+
+uninstall:
+	rm -rf $(INSTALL_LIB)$(NAME).$(VERSION)
+	rm -rf $(INSTALL_LIB)$(NAME)
+	rm -rf $(INSTALL_LIB)$(NAME).0
+	rm -rf $(INSTALL_INCLUDE)
