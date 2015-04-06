@@ -54,31 +54,6 @@ char *strnstr(const char *haystack, const char *needle, size_t len) {
 	return NULL;
 }
 
-void url_decode(const char *src, const size_t src_siz, char *dest) {
-	unsigned int srcIter = 0, destIter = 0;
-	char to_conv[] = "00";
-
-	while (srcIter < src_siz) {
-		if (src[srcIter] == '%' && srcIter + 2 < src_siz
-				&& isxdigit(src[srcIter + 1]) && isxdigit(src[srcIter + 2])) {
-			/* Theres definitely a better way to do this but I don't care
-			 * right now. */
-			to_conv[0] = src[srcIter + 1];
-			to_conv[1] = src[srcIter + 2];
-
-			long int converted = strtol(to_conv, NULL, 16);
-			dest[destIter] = converted;
-
-			srcIter += 3;
-			destIter++;
-		}
-
-		dest[destIter] = src[srcIter];
-		destIter++;
-		srcIter++;
-	}
-}
-
 time_t get_file_creation_date(const char *file_path) {
 	struct stat st = {0};
 	if (stat(file_path, &st) == -1)
@@ -110,13 +85,4 @@ int hash_string_fnv1a(const unsigned char *key, const size_t siz, char outbuf[st
 
 	sprintf(outbuf, "%"PRIX64, hash);
 	return 1;
-}
-
-inline char *get_full_path_for_file(const char *dir, const char file_name[static MAX_FILENAME_SIZE]) {
-	const size_t siz = strlen(dir) + strlen("/") + strlen(file_name) + 1;
-	char *fpath = malloc(siz);
-
-	snprintf(fpath, siz, "%s/%s", dir, file_name);
-
-	return fpath;
 }
