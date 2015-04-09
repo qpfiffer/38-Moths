@@ -338,6 +338,16 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		assert(response.out != NULL);
 	}
 
+	/* Embed the handler's text into the header: */
+	size_t header_size = 0;
+	size_t actual_response_siz = 0;
+
+	/* Figure out if this thing needs to be partial */
+	char *range_header_value = get_header_value(request.full_header, strlen(request.full_header), "Range");
+	if (range_header_value && RESPONSE_OK(response_code)) {
+		response_code = 206;
+	}
+
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;
 	const code_to_message *response_headers = get_response_headers();
@@ -352,16 +362,6 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	/* Blow up if we don't have that code. We should have them all at
 	 * compile time. */
 	assert(matched_response != NULL);
-
-	/* Embed the handler's text into the header: */
-	size_t header_size = 0;
-	size_t actual_response_siz = 0;
-
-	/* Figure out if this thing needs to be partial */
-	char *range_header_value = get_header_value(request.full_header, strlen(request.full_header), "Range");
-	if (range_header_value && RESPONSE_OK(response_code)) {
-		response_code = 206;
-	}
 
 	if (response_code == 200 || response_code == 404) {
 		const size_t integer_length = UINT_LEN(response.outsize);
