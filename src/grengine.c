@@ -338,8 +338,6 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		assert(response.out != NULL);
 	}
 
-	log_request(&request, &response, response_code);
-
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;
 	const code_to_message *response_headers = get_response_headers();
@@ -381,9 +379,9 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 	} else if (response_code == 206) {
 		/* Byte range queries have some extra shit. */
 		range_header byte_range = parse_range_header(range_header_value);
-		free(range_header_value);
 
-		log_msg(LOG_INFO, "Range header parsed: Limit: %zu Offset: %zu", byte_range.limit, byte_range.offset);
+		log_msg(LOG_INFO, "Range header parsed: Raw: %s Limit: %zu Offset: %zu", range_header_value, byte_range.limit, byte_range.offset);
+		free(range_header_value);
 
 		const size_t c_offset = byte_range.offset;
 		const size_t c_limit = byte_range.limit == 0 ?
@@ -409,6 +407,8 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out + c_offset, full_size);
 	}
+
+	log_request(&request, &response, response_code);
 
 	/* Send that shit over the wire: */
 	const size_t bytes_siz = actual_response_siz;
