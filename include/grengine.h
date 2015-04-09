@@ -45,7 +45,7 @@ typedef struct {
 * xXx *out=A buffer of characters that will be written back to the requester. xXx
 * xXx outsize=The size of <code>out</code>.
 * xXx mimetype[32]=Optional, will be inferred from the http_request's file extension if left blank. xXx
-* xXx byte_range=If a partial content request comes in, this will b
+* xXx *extra_data=Optional, use this to pass things to the clean up function. For instance, mmap_file() uses <code>extra_data</code> to store the size of the file allocated. xXx
 */
 typedef struct {
 	unsigned char *out;
