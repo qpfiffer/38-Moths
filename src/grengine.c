@@ -52,6 +52,7 @@ struct {
 	{".jpg", "image/jpeg"},
 	{".txt", "text/plain"},
 	{".html", "text/html"},
+	{".svg", "image/svg+xml"},
 	{".ico", "image/x-icon"},
 	{".webm", "video/webm"},
 	{".gif", "image/gif"},
