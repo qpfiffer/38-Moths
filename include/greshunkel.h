@@ -12,7 +12,7 @@
 /* xXx DEFINE=MAX_GSHKL_STR_SIZE xXx
  * xXx DESCRIPTION=The maximum size of a greshunkel string. xXx
  */
-#define MAX_GSHKL_STR_SIZE 256
+#define MAX_GSHKL_STR_SIZE 512
 
 /* AND HE DECREED: */
 /* STRINGS SHALL NEVER BE MORE THAN 256 OCTETS! */
