@@ -25,7 +25,7 @@ inline int vector_append(vector *vec, const void *item, const size_t item_size) 
 
 	if (vec->count == vec->max_size) {
 		vec->max_size *= 2;
-		void *array = realloc(vec->items, (vec->max_size * vec->item_size));
+		void *array = realloc(vec->items, (vec->max_size * vec->item_size) + vec->item_size);
 		if (!array)
 			return 0;
 		vec->items = array;
