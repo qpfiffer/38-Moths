@@ -252,10 +252,10 @@ static void log_request(const http_request *request, const http_response *respon
 	char *visitor_ip_addr = get_header_value(request->full_header, strlen(request->full_header), "X-Real-IP");
 	char *user_agent = get_header_value(request->full_header, strlen(request->full_header), "User-Agent");
 
-	if (!visitor_ip_addr)
+	if (visitor_ip_addr == NULL)
 		visitor_ip_addr = "NOIP";
 
-	if (!user_agent)
+	if (user_agent == NULL)
 		user_agent = "NOUSERAGENT";
 
 	log_msg(LOG_FUN, "%s \"%s %s\" %i %i \"%s\"",
