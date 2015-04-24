@@ -123,7 +123,7 @@ char *get_header_value(const char *request, const size_t request_siz, const char
 		return NULL;
 
 	const char *header_value_start = header_loc + strlen(header) + strlen(": ");
-	const char *header_value_end = strstr(header_loc, "\r\n");
+	const char *header_value_end = strnstr(header_loc, "\r\n", request_siz);
 	if (!header_value_end)
 		return NULL;
 
