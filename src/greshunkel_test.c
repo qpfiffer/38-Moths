@@ -77,6 +77,7 @@ void test2() {
 	size_t a_siz = 0, b_siz = 0;
 	char *a_rendered = gshkl_render(ctext, templ_a, strlen(templ_a), &a_siz);
 	char *b_rendered = gshkl_render(ctext, templ_b, strlen(templ_b), &b_siz);
+	gshkl_free_context(ctext);
 
 	int ret = strcmp(a_rendered, b_rendered);
 	assert(ret != 0);
