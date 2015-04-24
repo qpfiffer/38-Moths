@@ -7,7 +7,7 @@
 
 vector *vector_new(const size_t item_size, const size_t initial_element_count) {
 	vector _vec = {
-		.item_size = item_size,
+		.item_size = item_size + 1,
 		.max_size = initial_element_count,
 		.count = 0,
 		.items = calloc(initial_element_count, item_size)
@@ -25,7 +25,7 @@ inline int vector_append(vector *vec, const void *item, const size_t item_size) 
 
 	if (vec->count == vec->max_size) {
 		vec->max_size *= 2;
-		void *array = realloc(vec->items, (vec->max_size * vec->item_size) + vec->item_size);
+		void *array = realloc(vec->items, vec->max_size * vec->item_size);
 		if (!array)
 			return 0;
 		vec->items = array;
