@@ -21,6 +21,8 @@ const char document[] =
 "		xXx LOOP i LOOP_TEST xXx\n"
 "			<li>XxX return_z xXx @i xXx XxX</li>\n"
 "		xXx BBL xXx\n"
+"		<p>Context Interpolation:</p>\n"
+"		<p>xXx @sub.name xXx - xXx @sub.other xXx</p>\n"
 "		<p>XxX return_hello doesnt_matter_at_all XxX</p>\n"
 "		</ul>\n"
 "	</body>\n"

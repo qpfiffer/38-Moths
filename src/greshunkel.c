@@ -12,6 +12,7 @@
 /* Compiled regex vars. */
 struct compiled_regex {
 	regex_t c_var_regex;
+	regex_t c_cvar_regex;
 	regex_t c_loop_regex;
 	regex_t c_filter_regex;
 	regex_t c_include_regex;
@@ -33,6 +34,7 @@ typedef struct _match {
 } match_t;
 
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
+static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]+) xXx";
 static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
 static const char include_regex[] = "^\\s+xXx SCREAM ([a-zA-Z_]+) xXx";
@@ -260,9 +262,8 @@ static const void *find_needle(const greshunkel_ctext *ctext, const char *needle
 			const greshunkel_named_item *item = (greshunkel_named_item *)vector_get(current_vector, i);
 			assert(item->name != NULL);
 			const size_t larger = strlen(item->name) > strlen(needle) ? strlen(item->name) : strlen(needle);
-			if (strncmp(item->name, needle, larger) == 0) {
+			if (strncmp(item->name, needle, larger) == 0)
 				return item;
-			}
 		}
 		current_ctext = current_ctext->parent;
 	}
@@ -311,10 +312,69 @@ static line
 _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const struct compiled_regex *all_regex) {
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
-	match_t match[2];
 	const line *operating_line = &current_line;
 	assert(operating_line->data != NULL);
 
+	match_t cvar_match[3];
+	/* We're using different variables here. */
+	while (regexec_2_0_beta(&all_regex->c_cvar_regex, operating_line->data, 3, cvar_match) == 0) {
+		const match_t inner_match = cvar_match[1];
+		const match_t subname_match = cvar_match[2];
+		assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
+		assert(subname_match.rm_so != -1 && subname_match.rm_eo != -1);
+
+		const greshunkel_tuple *tuple;
+		char just_match_str[inner_match.len + 1];
+		just_match_str[inner_match.len] = '\0';
+		strncpy(just_match_str, inner_match.start, inner_match.len);
+
+		/* So here we search for a sub context instead of a string. */
+		if ((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_SUBCTEXT) {
+			const greshunkel_ctext *sub_ctext = tuple->value.sub_ctext;
+
+			char just_subname_match_str[subname_match.len + 1];
+			just_subname_match_str[subname_match.len] = '\0';
+			strncpy(just_subname_match_str, subname_match.start, subname_match.len);
+			/* So now we need to:
+			 * 1. Loop through the subcontext's values searching for subname_match
+			 * 2. Inteprolate using that value.
+			 */
+
+			unsigned int i;
+			for (i = 0; i < sub_ctext->values->count; i++) {
+				const greshunkel_tuple *sub_tuple = vector_get(sub_ctext->values, i);
+				const char *_name = sub_tuple->name;
+				const size_t larger = strlen(_name) > strlen(just_subname_match_str) ?
+						strlen(_name) : strlen(just_subname_match_str);
+
+				if (strncmp(_name, just_subname_match_str, larger) == 0) {
+					/* TODO: Only works on strings. */
+					assert(sub_tuple->type == GSHKL_STR);
+					vishnu(&new_line_to_add, cvar_match[0], sub_tuple->value.str, operating_line);
+					goto done;
+				}
+			}
+		} else {
+			/* Blow up if we had a variable that wasn't in the context. */
+			printf("Did not match a cvariable that needed to be matched.\n");
+			printf("Line: %s\n", operating_line->data);
+			assert(tuple != NULL);
+			assert(tuple->type == GSHKL_SUBCTEXT);
+		}
+
+done:
+		free(interpolated_line.data);
+		interpolated_line.size = new_line_to_add.size;
+		interpolated_line.data = new_line_to_add.data;
+		new_line_to_add.size = 0;
+		new_line_to_add.data = NULL;
+		operating_line = &interpolated_line;
+
+		/* Set the next regex check after this one. */
+		memset(cvar_match, 0, sizeof(cvar_match));
+	}
+
+	match_t match[2];
 	while (regexec_2_0_beta(&all_regex->c_var_regex, operating_line->data, 2, match) == 0) {
 		const match_t inner_match = match[1];
 		assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
@@ -434,6 +494,9 @@ static inline void _compile_regex(struct compiled_regex *all_regex) {
 	int reti = regcomp(&all_regex->c_var_regex, variable_regex, REG_EXTENDED);
 	assert(reti == 0);
 
+	reti = regcomp(&all_regex->c_cvar_regex, ctext_variable_regex, REG_EXTENDED);
+	assert(reti == 0);
+
 	reti = regcomp(&all_regex->c_loop_regex, loop_regex, REG_EXTENDED);
 	assert(reti == 0);
 
@@ -446,6 +509,7 @@ static inline void _compile_regex(struct compiled_regex *all_regex) {
 
 static inline void _destroy_regex(struct compiled_regex *all_regex) {
 	regfree(&all_regex->c_var_regex);
+	regfree(&all_regex->c_cvar_regex);
 	regfree(&all_regex->c_loop_regex);
 	regfree(&all_regex->c_filter_regex);
 	regfree(&all_regex->c_include_regex);
