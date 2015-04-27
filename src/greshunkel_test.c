@@ -23,6 +23,9 @@ const char document[] =
 "		xXx BBL xXx\n"
 "		<p>Context Interpolation:</p>\n"
 "		<p>xXx @sub.name xXx - xXx @sub.other xXx</p>\n"
+"		xXx LOOP subs SUB_LOOP_TEST xXx\n"
+	"		<p>xXx @subs.name xXx - xXx @subs.other xXx</p>\n"
+"		xXx BBL xXx\n"
 "		<p>XxX return_hello doesnt_matter_at_all XxX</p>\n"
 "		</ul>\n"
 "	</body>\n"
@@ -65,6 +68,15 @@ void test1() {
 	gshkl_add_string(sub, "name", "test_name");
 	gshkl_add_string(sub, "other", "other_value");
 	gshkl_add_sub_context(ctext, "sub", sub);
+
+	greshunkel_var sub_loop_test = gshkl_add_array(ctext, "SUB_LOOP_TEST");
+	unsigned int i;
+	for (i = 0; i < 3; i++) {
+		greshunkel_ctext *sub = gshkl_init_context();
+		gshkl_add_string(sub, "name", "I AM IN A LOOP!");
+		gshkl_add_int(sub, "other", i);
+		gshkl_add_sub_context_to_loop(&sub_loop_test, sub);
+	}
 
 	char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
 	gshkl_free_context(ctext);

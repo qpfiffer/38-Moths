@@ -178,6 +178,21 @@ int gshkl_add_int_to_loop(greshunkel_var *loop, const int value) {
 	return _gshkl_add_var_to_loop(loop, &_stack_tuple);
 }
 
+int gshkl_add_sub_context_to_loop(greshunkel_var *loop, const greshunkel_ctext *ctext) {
+	assert(loop != NULL);
+	assert(ctext != NULL);
+
+	greshunkel_tuple _stack_tuple = {
+		.name = {0},
+		.type = GSHKL_SUBCTEXT,
+		.value = {
+			.sub_ctext = ctext
+		}
+	};
+
+	return _gshkl_add_var_to_loop(loop, &_stack_tuple);
+}
+
 int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value) {
 	assert(loop != NULL);
 
@@ -487,14 +502,24 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		unsigned int j;
 		for (j = 0; j < cur_vector_p->count; j++) {
 			const greshunkel_tuple *current_loop_var = vector_get(cur_vector_p, j);
-			/* TODO: For now, only strings are supported in arrays. */
-			assert(current_loop_var->type == GSHKL_STR);
-
-			/* Recurse contexts until my fucking mind melts. */
-			greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
-			gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
-			line rendered_piece = _interpolate_line(_temp_ctext, to_render_line, all_regex);
-			gshkl_free_context(_temp_ctext);
+			line rendered_piece;
+			if (current_loop_var->type == GSHKL_STR) {
+				/* Recurse contexts until my fucking mind melts. */
+				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
+				gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
+				rendered_piece = _interpolate_line(_temp_ctext, to_render_line, all_regex);
+				gshkl_free_context(_temp_ctext);
+			} else if (current_loop_var->type == GSHKL_SUBCTEXT) {
+				/* Recurse contexts until my fucking mind melts. */
+				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
+				gshkl_add_sub_context(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.sub_ctext);
+				rendered_piece = _interpolate_line(_temp_ctext, to_render_line, all_regex);
+				gshkl_free_context(_temp_ctext);
+			} else {
+				printf("Weird type given during loop interpolation.");
+				printf("Line: %s\n", buf);
+				assert(1 == 0);
+			}
 
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;

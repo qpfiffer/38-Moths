@@ -144,6 +144,14 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value);
  */
 int gshkl_add_int_to_loop(greshunkel_var *loop, const int value);
 
+/* xXx FUNCTION=gshkl_add_sub_context_to_loop xXx
+ * xXx DESCRIPTION=Adds a name sub-context to a loop. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *loop=The loop to add the context to. xXx
+ * xXx *child=The pre-built child context. xXx
+ */
+int gshkl_add_sub_context_to_loop(greshunkel_var *loop, const greshunkel_ctext *child);
+
 /* Sub-context management */
 
 /* xXx FUNCTION=gshkl_add_sub_context xXx
