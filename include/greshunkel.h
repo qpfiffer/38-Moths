@@ -147,7 +147,7 @@ int gshkl_add_int_to_loop(greshunkel_var *loop, const int value);
 /* Sub-context management */
 
 /* xXx FUNCTION=gshkl_add_sub_context xXx
- * xXx DESCRIPTION=Adds a name sub-context to a parent context. Sub-context values can be references via the 'xXx @<name>.<value> xXx' syntax. xXx
+ * xXx DESCRIPTION=Adds a name sub-context to a parent context. Sub-context values can be references via the 'xXx @<name>.<value> xXx' syntax. Contexts added in this way will be freed by the parent. xXx
  * xXx RETURNS=0 on success, 1 otherwise. xXx
  * xXx *parent=The parent context to add the child to. xXx
  * xXx name=The name of the child context. xXx

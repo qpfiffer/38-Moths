@@ -207,7 +207,8 @@ void gshkl_free_context(greshunkel_ctext *ctext) {
 		greshunkel_tuple *next = (greshunkel_tuple *)vector_get(ctext->values, i);
 		if (next->type == GSHKL_ARR) {
 			_gshkl_free_arr(next);
-			continue;
+		} else if (next->type == GSHKL_SUBCTEXT) {
+			gshkl_free_context((struct greshunkel_ctext *)next->value.sub_ctext);
 		}
 	}
 	vector_free(ctext->values);
