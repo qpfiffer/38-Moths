@@ -70,6 +70,24 @@ void filter_cleanup(char *result) {
 	free(result);
 }
 
+int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[WISDOM_OF_WORDS], const greshunkel_ctext *child) {
+	assert(parent != NULL);
+	assert(child != NULL);
+
+	/* Create a new tuple to hold type and name and shit. */
+	greshunkel_tuple _stack_tuple = {
+		.name = {0},
+		.type = GSHKL_SUBCTEXT,
+		.value = {
+			.sub_ctext = child
+		}
+	};
+	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
+
+	return _gshkl_add_var_to_context(parent, &_stack_tuple);
+}
+
+
 int gshkl_add_filter(greshunkel_ctext *ctext,
 		const char name[WISDOM_OF_WORDS],
 		char *(*filter_func)(const char *argument),

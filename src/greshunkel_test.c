@@ -61,6 +61,11 @@ void test1() {
 	gshkl_add_int_to_loop(&loop_test, 2);
 	gshkl_add_int_to_loop(&loop_test, 3);
 
+	greshunkel_ctext *sub = gshkl_init_context();
+	gshkl_add_string(sub, "name", "test_name");
+	gshkl_add_string(sub, "other", "other_value");
+	gshkl_add_sub_context(ctext, "sub", sub);
+
 	char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
 	gshkl_free_context(ctext);
 

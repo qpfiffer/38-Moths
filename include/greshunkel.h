@@ -42,7 +42,7 @@ typedef union greshunkel_var {
 	const unsigned int fuck_gcc : 1; /* This tricks GCC into doing smart things. Not used. */
 	char str[MAX_GSHKL_STR_SIZE + 1];
 	vector *arr;
-	greshunkel_ctext *sub_ctext;
+	const greshunkel_ctext *sub_ctext;
 } greshunkel_var;
 
 /* xXx ENUM=greshunkel_type xXx
@@ -143,6 +143,17 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value);
  * xXx value=The integer to be added. xXx
  */
 int gshkl_add_int_to_loop(greshunkel_var *loop, const int value);
+
+/* Sub-context management */
+
+/* xXx FUNCTION=gshkl_add_sub_context xXx
+ * xXx DESCRIPTION=Adds a name sub-context to a parent context. Sub-context values can be references via the 'xXx @<name>.<value> xXx' syntax. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *parent=The parent context to add the child to. xXx
+ * xXx name=The name of the child context. xXx
+ * xXx *child=The pre-built child context. xXx
+ */
+int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[WISDOM_OF_WORDS], const greshunkel_ctext *child);
 
 /* Filters management */
 
