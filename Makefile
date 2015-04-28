@@ -31,7 +31,7 @@ lib: $(NAME)
 $(NAME): $(COMMON_OBJ) grengine.o greshunkel.o server.o parse.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(NAME) -shared $^ $(LIBS)
 
-install: lib
+install: all
 	@mkdir -p $(INSTALL_LIB)
 	@mkdir -p $(INSTALL_INCLUDE)
 	@install $(NAME) $(INSTALL_LIB)$(NAME).$(VERSION)
