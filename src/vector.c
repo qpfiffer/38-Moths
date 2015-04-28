@@ -31,8 +31,13 @@ inline int vector_append(vector *vec, const void *item, const size_t item_size) 
 		vec->items = array;
 	}
 
-	memcpy(nth(vec->count), item, item_size);
-	memset(nth(vec->count) + item_size, '\0', sizeof(char));
+	if (item_size != 0 && item != NULL) {
+		memcpy(nth(vec->count), item, item_size);
+		memset(nth(vec->count) + item_size, '\0', sizeof(char));
+	} else {
+		/* Just zero out the memory so we can check for NULLs. */
+		memset(nth(vec->count), 0, vec->item_size);
+	}
 	vec->count++;
 	return 1;
 }
