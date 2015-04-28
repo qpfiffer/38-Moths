@@ -305,12 +305,31 @@ static const void *find_needle(const greshunkel_ctext *ctext, const char *needle
 }
 
 static line
-_filter_line(const greshunkel_ctext *ctext, const line *operating_line, const struct compiled_regex *all_regex) {
-	line to_return = {0};
+_filter_line(const greshunkel_ctext *ctext, const line *current_line, const struct compiled_regex *all_regex) {
+	line interpolated_line = {0};
+	line new_line_to_add = {0};
+	const line *operating_line = current_line;
+	assert(operating_line->data != NULL);
+
 	/* Now we match template filters: */
 	match_t filter_matches[3];
+
 	/* TODO: More than one filter per line. */
-	if (regexec_2_0_beta(&all_regex->c_filter_regex, operating_line->data, 3, filter_matches) == 0) {
+	while (regexec_2_0_beta(&all_regex->c_filter_regex, operating_line->data, 3, filter_matches) == 0) {
+		match_t whole_match = filter_matches[0];
+		const char *first_XxX = strstr(whole_match.start, " XxX");
+		const char *end_of_first_XxX = first_XxX + strlen(" XxX");
+		const size_t full_diff = end_of_first_XxX - whole_match.start;
+		(void)full_diff;
+
+		//whole_match.rm_eo - full_diff;
+		whole_match.rm_eo = (whole_match.start + full_diff) - operating_line->data;
+		whole_match.len = full_diff;
+		/* Because we can't do non-greedy regex with POSIX, we have to fuck around
+		 * with this kind of garbage.
+		 */
+		assert(first_XxX != NULL);
+
 		const match_t function_name = filter_matches[1];
 		const match_t argument = filter_matches[2];
 
@@ -321,24 +340,34 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const st
 
 		if ((filter = find_needle(ctext, just_match_str, 0))) {
 
+			const size_t new_len = first_XxX - argument.start;
+
 			/* Render the argument out so we can pass it to the filter function. */
-			char *rendered_argument = strndup(argument.start, argument.len);
+			char *rendered_argument = strndup(argument.start, new_len);
 
 			/* Pass it to the filter function. */
 			char *filter_result = filter->filter_func(rendered_argument);
 
-			vishnu(&to_return, filter_matches[0], filter_result, operating_line);
+			vishnu(&new_line_to_add, whole_match, filter_result, operating_line);
 
 			if (filter->clean_up != NULL)
 				filter->clean_up(filter_result);
 
 			free(rendered_argument);
-			return to_return;
 		}
 		assert(filter != NULL);
+
+		free(interpolated_line.data);
+		interpolated_line.size = new_line_to_add.size;
+		interpolated_line.data = new_line_to_add.data;
+		new_line_to_add.size = 0;
+		new_line_to_add.data = NULL;
+		operating_line = &interpolated_line;
+
+		/* Set the next regex check after this one. */
+		memset(filter_matches, 0, sizeof(filter_matches));
 	}
 
-	/* We didn't match any filters. Just return the operating line. */
 	return *operating_line;
 }
 
