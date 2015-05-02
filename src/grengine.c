@@ -147,6 +147,7 @@ static int mmap_file_ol(const char *file_path, http_response *response,
 	if (fd <= 0) {
 		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
+		perror("mmap_file_ol: could not open file");
 		free(response->extra_data);
 		response->extra_data = NULL;
 		close(fd);
