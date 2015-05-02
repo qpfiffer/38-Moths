@@ -13,8 +13,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <oleg-http/http.h>
-
 #include "grengine.h"
 #include "greshunkel.h"
 #include "utils.h"
