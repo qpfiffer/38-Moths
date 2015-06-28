@@ -594,7 +594,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 
 	/* We start up a new buffer and copy the old one into it: */
 	char *rendered = NULL;
-	*outsize = 0;
+	size_t intermediate_outsize = 0;
 
 	struct compiled_regex all_regex;
 	_compile_regex(&all_regex);
@@ -620,10 +620,10 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		}
 
 		/* Fuck this */
-		const size_t old_outsize = *outsize;
-		*outsize += to_append.size;
+		const size_t old_outsize = intermediate_outsize;
+		intermediate_outsize += to_append.size;
 		{
-			char *med_buf = realloc(rendered, *outsize);
+			char *med_buf = realloc(rendered, intermediate_outsize);
 			if (med_buf == NULL)
 				goto error;
 			rendered = med_buf;
@@ -634,11 +634,13 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		free(to_append.data);
 	}
 	_destroy_regex(&all_regex);
-	rendered[*outsize - 1] = '\0';
+	rendered[intermediate_outsize - 1] = '\0';
+
+	if (outsize)
+		*outsize = intermediate_outsize;
 	return rendered;
 
 error:
 	free(rendered);
-	*outsize = 0;
 	return NULL;
 }

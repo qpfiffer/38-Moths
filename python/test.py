@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
+from greshunkel import Template, Context
 
 # Taken from the greshunkel_test.c file
-test_template = 
+test_template =\
 """
 <html>
     <body>
@@ -31,6 +32,15 @@ test_template =
 
 
 def main():
+    context = Context({
+        "TEST": "This is a test.",
+        "FAKEINT": 666,
+        "TRICKY": "TrIcKy",
+        "ONE": 1,
+        "LOOP_TEST": ["a", "b", "c", 1, 2, 3]
+    })
+    template = Template(test_template)
+    print(template.render(context))
 
 if __name__ == '__main__':
     main()
