@@ -1,20 +1,9 @@
 from ctypes import cdll, c_char_p, c_size_t, c_void_p, Union,\
-                   LittleEndianStructure, c_char, c_uint8, POINTER,\
+                   LittleEndianStructure, c_char, POINTER,\
                    c_int, byref
-
-#typedef union greshunkel_var {
-#	const unsigned int fuck_gcc : 1; /* This tricks GCC into doing smart things. Not used. */
-#	char str[MAX_GSHKL_STR_SIZE + 1];
-#	vector *arr;
-#	const greshunkel_ctext *sub_ctext;
-#} greshunkel_var;
-
-class fuck_gcc(LittleEndianStructure):
-    _fields_ = [("fuck_gcc", c_uint8, 1)]
 
 class greshunkel_var(Union):
     _fields_ = [
-            ("fuck_gcc", fuck_gcc),
             ("str", c_char * 513),
             ("arr", c_void_p),
             ("sub_ctext", c_void_p)

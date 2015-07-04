@@ -111,12 +111,12 @@ int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], 
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},
 		.type = GSHKL_STR,
-		.value =  {0}
+		.value =  {{0}}
 	};
 	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
 
 	/* Copy the value of the string into the var object: */
-	greshunkel_var _stack_var = {0};
+	greshunkel_var _stack_var = {{0}};
 	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
 	_stack_var.str[MAX_GSHKL_STR_SIZE] = '\0';
 
@@ -133,11 +133,11 @@ int gshkl_add_int(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], con
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},
 		.type = GSHKL_STR,
-		.value = {0}
+		.value = {{0}}
 	};
 	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
 
-	greshunkel_var _stack_var = {0};
+	greshunkel_var _stack_var = {{0}};
 	snprintf(_stack_var.str, MAX_GSHKL_STR_SIZE, "%i", value);
 
 	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
@@ -167,10 +167,10 @@ int gshkl_add_int_to_loop(greshunkel_var *loop, const int value) {
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},
 		.type = GSHKL_STR,
-		.value = {0}
+		.value = {{0}}
 	};
 
-	greshunkel_var _stack_var = {0};
+	greshunkel_var _stack_var = {{0}};
 	snprintf(_stack_var.str, MAX_GSHKL_STR_SIZE, "%i", value);
 
 	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
@@ -199,10 +199,10 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value) {
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},
 		.type = GSHKL_STR,
-		.value = {0}
+		.value = {{0}}
 	};
 
-	greshunkel_var _stack_var = {0};
+	greshunkel_var _stack_var = {{0}};
 	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
 	_stack_var.str[MAX_GSHKL_STR_SIZE] = '\0';
 

@@ -39,7 +39,6 @@ typedef struct greshunkel_ctext {
  * xXx *sub_ctext=If this var is a sub context, this will hold the sub context for the variable. xXx
  */
 typedef union greshunkel_var {
-	const unsigned int fuck_gcc : 1; /* This tricks GCC into doing smart things. Not used. */
 	char str[MAX_GSHKL_STR_SIZE + 1];
 	vector *arr;
 	const greshunkel_ctext *sub_ctext;
