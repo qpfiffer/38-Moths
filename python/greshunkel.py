@@ -1,12 +1,16 @@
-from ctypes import cdll, c_char_p, c_size_t
+from ctypes import cdll, c_char_p, c_size_t, c_void_p
 
 lib38moths = cdll.LoadLibrary("lib38moths.so")
+
+lib38moths.gshkl_init_context.restype = c_void_p
+lib38moths.gshkl_add_array.restype = c_void_p
+lib38moths.gshkl_render.restype = c_char_p
 
 def _add_item_to_greshunkel_loop(loop, value):
     if isinstance(value, str):
         lib38moths.gshkl_add_string_to_loop(loop, c_char_p(value.encode()))
     elif isinstance(value, int):
-        lib38moths.gshkl_add_int_to_loop(ctext, c_size_t(value))
+        lib38moths.gshkl_add_int_to_loop(loop, c_size_t(value))
     elif isinstance(value, list):
         raise Exception("Cannot add loops to loops right now. Use subcontexts.")
     elif isinstance(value, dict):
