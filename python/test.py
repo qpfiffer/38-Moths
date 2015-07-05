@@ -31,19 +31,24 @@ test_template =\
 """
 
 
-def test(arg):
-    return "test".encode()
+def return_hello(arg):
+    return b"test"
+
+def return_z(arg):
+    return b"z"
 
 def main():
-    test_func = GshklFilterFunc(test)
+    return_helloc = GshklFilterFunc(return_hello)
+    return_zc = GshklFilterFunc(return_z)
     context = Context({
         "TEST": "This is a test.",
         "FAKEINT": 666,
         "TRICKY": "TrIcKy",
         "ONE": 1,
         "LOOP_TEST": ["a", "b", "c", 1, 2, 3],
-        "return_hello": test_func,
-        "return_z": test_func
+        "SUB_LOOP_TEST": [],
+        "return_hello": return_helloc,
+        "return_z": return_zc
     })
     template = Template(test_template)
     print(template.render(context))
