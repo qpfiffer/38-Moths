@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from greshunkel import Template, Context
+from greshunkel import Template, Context, GshklFilterFunc
 
 # Taken from the greshunkel_test.c file
 test_template =\
@@ -31,13 +31,19 @@ test_template =\
 """
 
 
+def test(arg):
+    return "test".encode()
+
 def main():
+    test_func = GshklFilterFunc(test)
     context = Context({
         "TEST": "This is a test.",
         "FAKEINT": 666,
         "TRICKY": "TrIcKy",
         "ONE": 1,
-        "LOOP_TEST": ["a", "b", "c", 1, 2, 3]
+        "LOOP_TEST": ["a", "b", "c", 1, 2, 3],
+        "return_hello": test_func,
+        "return_z": test_func
     })
     template = Template(test_template)
     print(template.render(context))

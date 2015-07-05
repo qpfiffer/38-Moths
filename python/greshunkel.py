@@ -1,6 +1,6 @@
 from ctypes import cdll, c_char_p, c_size_t, c_void_p, Union,\
                    LittleEndianStructure, c_char, POINTER,\
-                   c_int, byref
+                   c_int, byref, CFUNCTYPE, create_string_buffer
 
 class greshunkel_var(Union):
     _fields_ = [
@@ -9,6 +9,8 @@ class greshunkel_var(Union):
             ("sub_ctext", c_void_p)
             ]
 
+GshklFilterFunc = CFUNCTYPE(c_char_p, c_char_p)
+
 lib38moths = cdll.LoadLibrary("lib38moths.so")
 
 lib38moths.gshkl_init_context.restype = c_void_p
@@ -16,13 +18,16 @@ lib38moths.gshkl_add_array.argtypes = [c_void_p, c_char_p]
 lib38moths.gshkl_add_array.restype = greshunkel_var
 lib38moths.gshkl_add_string_to_loop.argtypes = [POINTER(greshunkel_var), c_char_p]
 lib38moths.gshkl_add_int_to_loop.argtypes = [POINTER(greshunkel_var), c_int]
+lib38moths.gshkl_add_filter.argtypes = [c_void_p, c_char_p, GshklFilterFunc, c_void_p]
 lib38moths.gshkl_render.restype = c_char_p
 
-def _add_item_to_greshunkel_loop(loop, value):
+def _add_item_to_greshunkel_loop(ctext, loop, value):
     if isinstance(value, str):
         lib38moths.gshkl_add_string_to_loop(byref(loop), c_char_p(value.encode()))
     elif isinstance(value, int):
         lib38moths.gshkl_add_int_to_loop(byref(loop), value)
+    elif hasattr(value, '__call__'):
+        lib38moths.gshkl_add_filter(ctext, c_char_p(key.encode()), value, None)
     elif isinstance(value, list):
         raise Exception("Cannot add loops to loops right now. Use subcontexts.")
     elif isinstance(value, dict):
@@ -37,7 +42,9 @@ def _add_item_to_greshunkel_context(ctext, key, value):
         converted_key = c_char_p(key.encode())
         new_loop = lib38moths.gshkl_add_array(ctext, converted_key)
         for subitem in value:
-            _add_item_to_greshunkel_loop(new_loop, subitem)
+            _add_item_to_greshunkel_loop(ctext, new_loop, subitem)
+    elif hasattr(value, '__call__'):
+        lib38moths.gshkl_add_filter(ctext, c_char_p(key.encode()), value, None)
     elif isinstance(value, dict):
         raise NotImplementedError()
 
