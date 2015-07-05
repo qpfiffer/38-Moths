@@ -46,9 +46,14 @@ def main():
         "TRICKY": "TrIcKy",
         "ONE": 1,
         "LOOP_TEST": ["a", "b", "c", 1, 2, 3],
-        "SUB_LOOP_TEST": [],
+        "SUB_LOOP_TEST": [
+            {"name": "One", "other": 1 },
+            {"name": "Two", "other": 2 },
+            {"name": "Three", "other": 3 },
+        ],
         "return_hello": return_helloc,
-        "return_z": return_zc
+        "return_z": return_zc,
+        "sub": { "name": "test", "other": 777 },
     })
     template = Template(test_template)
     print(template.render(context))

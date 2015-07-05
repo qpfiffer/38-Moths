@@ -31,7 +31,10 @@ def _add_item_to_greshunkel_loop(ctext, loop, value):
     elif isinstance(value, list):
         raise Exception("Cannot add loops to loops right now. Use subcontexts.")
     elif isinstance(value, dict):
-        raise NotImplementedError()
+        sub_ctext = lib38moths.gshkl_init_context()
+        lib38moths.gshkl_add_sub_context_to_loop(byref(loop), sub_ctext)
+        for sub_key, sub_value in value.items():
+            _add_item_to_greshunkel_context(sub_ctext, sub_key, sub_value)
 
 def _add_item_to_greshunkel_context(ctext, key, value):
     if isinstance(value, str):
@@ -46,7 +49,10 @@ def _add_item_to_greshunkel_context(ctext, key, value):
     elif hasattr(value, '__call__'):
         lib38moths.gshkl_add_filter(ctext, c_char_p(key.encode()), value, None)
     elif isinstance(value, dict):
-        raise NotImplementedError()
+        sub_ctext = lib38moths.gshkl_init_context()
+        lib38moths.gshkl_add_sub_context(ctext, c_char_p(key.encode()), sub_ctext)
+        for sub_key, sub_value in value.items():
+            _add_item_to_greshunkel_context(sub_ctext, sub_key, sub_value)
 
 class Context(object):
     def __init__(self, context_dict):
