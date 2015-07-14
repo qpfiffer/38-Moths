@@ -25,7 +25,7 @@
 */
 #define HASH_STR_SIZE 65
 
-/* xXx FUNCTION=endsiwth xXx
+/* xXx FUNCTION=endswith xXx
 * xXx DESCRIPTION=Helper function determine if a string ends with another string. xXx
 * xXx RETURNS=1 if <code>string</code> ends with <code>suffix</code>. xXx
 * xXx *string=The source string to test. xXx
