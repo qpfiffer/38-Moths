@@ -17,12 +17,18 @@ const char document[] =
 "		<p>This is a regular string: xXx @TEST xXx</p>\n"
 "		<p>This is an integer: xXx @FAKEINT xXx</p>\n"
 "		<ul>\n"
-"\n"
 "		xXx LOOP i LOOP_TEST xXx\n"
 "			<li>XxX return_z xXx @i xXx XxX</li>\n"
 "		xXx BBL xXx\n"
-"		<p>XxX return_hello doesnt_matter_at_all XxX</p>\n"
 "		</ul>\n"
+"		<p>Context Interpolation:</p>\n"
+"		<p>xXx @sub.name xXx - xXx @sub.other xXx</p>\n"
+"		<p>XxX return_hello doesnt_matter_at_all XxX</p>\n"
+"		xXx LOOP subs SUB_LOOP_TEST xXx\n"
+"			<p>FILTERS IN FILTERS IN LOOPS: XxX return_z F XxX</p>\n"
+"			<p>XxX return_hello f XxX</p>\n"
+"			<p>xXx @subs.name xXx - xXx @subs.other xXx</p>\n"
+"		xXx BBL xXx\n"
 "	</body>\n"
 "</html>\n";
 
@@ -59,6 +65,20 @@ void test1() {
 	gshkl_add_int_to_loop(&loop_test, 2);
 	gshkl_add_int_to_loop(&loop_test, 3);
 
+	greshunkel_ctext *sub = gshkl_init_context();
+	gshkl_add_string(sub, "name", "test_name");
+	gshkl_add_string(sub, "other", "other_value");
+	gshkl_add_sub_context(ctext, "sub", sub);
+
+	greshunkel_var sub_loop_test = gshkl_add_array(ctext, "SUB_LOOP_TEST");
+	unsigned int i;
+	for (i = 0; i < 3; i++) {
+		greshunkel_ctext *sub = gshkl_init_context();
+		gshkl_add_string(sub, "name", "I AM IN A LOOP!");
+		gshkl_add_int(sub, "other", i);
+		gshkl_add_sub_context_to_loop(&sub_loop_test, sub);
+	}
+
 	char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
 	gshkl_free_context(ctext);
 
@@ -77,6 +97,7 @@ void test2() {
 	size_t a_siz = 0, b_siz = 0;
 	char *a_rendered = gshkl_render(ctext, templ_a, strlen(templ_a), &a_siz);
 	char *b_rendered = gshkl_render(ctext, templ_b, strlen(templ_b), &b_siz);
+	gshkl_free_context(ctext);
 
 	int ret = strcmp(a_rendered, b_rendered);
 	assert(ret != 0);

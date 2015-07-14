@@ -10,10 +10,10 @@ vector *vector_new(const size_t item_size, const size_t initial_element_count) {
 		.item_size = item_size,
 		.max_size = initial_element_count,
 		.count = 0,
-		.items = calloc(initial_element_count, item_size)
+		.items = malloc(initial_element_count * item_size + 1)
 	};
 
-	vector *to_return = calloc(1, sizeof(vector));
+	vector *to_return = malloc(sizeof(vector));
 	memcpy(to_return, &_vec, sizeof(vector));
 
 	return to_return;
@@ -25,14 +25,19 @@ inline int vector_append(vector *vec, const void *item, const size_t item_size) 
 
 	if (vec->count == vec->max_size) {
 		vec->max_size *= 2;
-		void *array = realloc(vec->items, (vec->max_size * vec->item_size));
+		void *array = realloc(vec->items, vec->max_size * vec->item_size + 1);
 		if (!array)
 			return 0;
 		vec->items = array;
 	}
 
-	memcpy(nth(vec->count), item, item_size);
-	memset(nth(vec->count) + item_size, '\0', sizeof(char));
+	if (item_size != 0 && item != NULL) {
+		memcpy(nth(vec->count), item, item_size);
+		memset(nth(vec->count) + item_size, '\0', sizeof(char));
+	} else {
+		/* Just zero out the memory so we can check for NULLs. */
+		memset(nth(vec->count), 0, vec->item_size);
+	}
 	vec->count++;
 	return 1;
 }

@@ -122,13 +122,14 @@ char *get_header_value(const char *request, const size_t request_siz, const char
 	if (!header_loc)
 		return NULL;
 
-	const char *header_value_start = header_loc + strlen(header) + strlen(": ");
-	const char *header_value_end = strstr(header_loc, "\r\n");
+	const char *header_value_start = header_loc + strnlen(header, request_siz) + strlen(": ");
+	const char *header_value_end = strnstr(header_loc, "\r\n", request_siz);
 	if (!header_value_end)
 		return NULL;
 
-	const size_t header_value_size = header_value_end - header_value_start + 1;
-	data = calloc(header_value_size, sizeof(char));
+	const size_t header_value_size = header_value_end - header_value_start;
+	data = calloc(sizeof(char), header_value_size + 1);
+	data[header_value_size] = '\0';
 	strncpy(data, header_value_start, header_value_size);
 
 	return data;

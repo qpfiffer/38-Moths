@@ -12,6 +12,7 @@
 /* Compiled regex vars. */
 struct compiled_regex {
 	regex_t c_var_regex;
+	regex_t c_cvar_regex;
 	regex_t c_loop_regex;
 	regex_t c_filter_regex;
 	regex_t c_include_regex;
@@ -33,6 +34,7 @@ typedef struct _match {
 } match_t;
 
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
+static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]+) xXx";
 static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
 static const char include_regex[] = "^\\s+xXx SCREAM ([a-zA-Z_]+) xXx";
@@ -68,6 +70,24 @@ void filter_cleanup(char *result) {
 	free(result);
 }
 
+int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[WISDOM_OF_WORDS], const greshunkel_ctext *child) {
+	assert(parent != NULL);
+	assert(child != NULL);
+
+	/* Create a new tuple to hold type and name and shit. */
+	greshunkel_tuple _stack_tuple = {
+		.name = {0},
+		.type = GSHKL_SUBCTEXT,
+		.value = {
+			.sub_ctext = child
+		}
+	};
+	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
+
+	return _gshkl_add_var_to_context(parent, &_stack_tuple);
+}
+
+
 int gshkl_add_filter(greshunkel_ctext *ctext,
 		const char name[WISDOM_OF_WORDS],
 		char *(*filter_func)(const char *argument),
@@ -91,12 +111,12 @@ int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], 
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},
 		.type = GSHKL_STR,
-		.value =  {0}
+		.value =  {{0}}
 	};
 	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
 
 	/* Copy the value of the string into the var object: */
-	greshunkel_var _stack_var = {0};
+	greshunkel_var _stack_var = {{0}};
 	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
 	_stack_var.str[MAX_GSHKL_STR_SIZE] = '\0';
 
@@ -113,11 +133,11 @@ int gshkl_add_int(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], con
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},
 		.type = GSHKL_STR,
-		.value = {0}
+		.value = {{0}}
 	};
 	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
 
-	greshunkel_var _stack_var = {0};
+	greshunkel_var _stack_var = {{0}};
 	snprintf(_stack_var.str, MAX_GSHKL_STR_SIZE, "%i", value);
 
 	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
@@ -147,13 +167,28 @@ int gshkl_add_int_to_loop(greshunkel_var *loop, const int value) {
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},
 		.type = GSHKL_STR,
-		.value = {0}
+		.value = {{0}}
 	};
 
-	greshunkel_var _stack_var = {0};
+	greshunkel_var _stack_var = {{0}};
 	snprintf(_stack_var.str, MAX_GSHKL_STR_SIZE, "%i", value);
 
 	memcpy(&_stack_tuple.value, &_stack_var, sizeof(greshunkel_var));
+
+	return _gshkl_add_var_to_loop(loop, &_stack_tuple);
+}
+
+int gshkl_add_sub_context_to_loop(greshunkel_var *loop, const greshunkel_ctext *ctext) {
+	assert(loop != NULL);
+	assert(ctext != NULL);
+
+	greshunkel_tuple _stack_tuple = {
+		.name = {0},
+		.type = GSHKL_SUBCTEXT,
+		.value = {
+			.sub_ctext = ctext
+		}
+	};
 
 	return _gshkl_add_var_to_loop(loop, &_stack_tuple);
 }
@@ -164,10 +199,10 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value) {
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},
 		.type = GSHKL_STR,
-		.value = {0}
+		.value = {{0}}
 	};
 
-	greshunkel_var _stack_var = {0};
+	greshunkel_var _stack_var = {{0}};
 	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
 	_stack_var.str[MAX_GSHKL_STR_SIZE] = '\0';
 
@@ -187,7 +222,8 @@ void gshkl_free_context(greshunkel_ctext *ctext) {
 		greshunkel_tuple *next = (greshunkel_tuple *)vector_get(ctext->values, i);
 		if (next->type == GSHKL_ARR) {
 			_gshkl_free_arr(next);
-			continue;
+		} else if (next->type == GSHKL_SUBCTEXT) {
+			gshkl_free_context((struct greshunkel_ctext *)next->value.sub_ctext);
 		}
 	}
 	vector_free(ctext->values);
@@ -260,9 +296,8 @@ static const void *find_needle(const greshunkel_ctext *ctext, const char *needle
 			const greshunkel_named_item *item = (greshunkel_named_item *)vector_get(current_vector, i);
 			assert(item->name != NULL);
 			const size_t larger = strlen(item->name) > strlen(needle) ? strlen(item->name) : strlen(needle);
-			if (strncmp(item->name, needle, larger) == 0) {
+			if (strncmp(item->name, needle, larger) == 0)
 				return item;
-			}
 		}
 		current_ctext = current_ctext->parent;
 	}
@@ -270,12 +305,31 @@ static const void *find_needle(const greshunkel_ctext *ctext, const char *needle
 }
 
 static line
-_filter_line(const greshunkel_ctext *ctext, const line *operating_line, const struct compiled_regex *all_regex) {
-	line to_return = {0};
+_filter_line(const greshunkel_ctext *ctext, const line *current_line, const struct compiled_regex *all_regex) {
+	line interpolated_line = {0};
+	line new_line_to_add = {0};
+	const line *operating_line = current_line;
+	assert(operating_line->data != NULL);
+
 	/* Now we match template filters: */
 	match_t filter_matches[3];
+
 	/* TODO: More than one filter per line. */
-	if (regexec_2_0_beta(&all_regex->c_filter_regex, operating_line->data, 3, filter_matches) == 0) {
+	while (regexec_2_0_beta(&all_regex->c_filter_regex, operating_line->data, 3, filter_matches) == 0) {
+		match_t whole_match = filter_matches[0];
+		const char *first_XxX = strstr(whole_match.start, " XxX");
+		const char *end_of_first_XxX = first_XxX + strlen(" XxX");
+		const size_t full_diff = end_of_first_XxX - whole_match.start;
+		(void)full_diff;
+
+		//whole_match.rm_eo - full_diff;
+		whole_match.rm_eo = (whole_match.start + full_diff) - operating_line->data;
+		whole_match.len = full_diff;
+		/* Because we can't do non-greedy regex with POSIX, we have to fuck around
+		 * with this kind of garbage.
+		 */
+		assert(first_XxX != NULL);
+
 		const match_t function_name = filter_matches[1];
 		const match_t argument = filter_matches[2];
 
@@ -286,24 +340,34 @@ _filter_line(const greshunkel_ctext *ctext, const line *operating_line, const st
 
 		if ((filter = find_needle(ctext, just_match_str, 0))) {
 
+			const size_t new_len = first_XxX - argument.start;
+
 			/* Render the argument out so we can pass it to the filter function. */
-			char *rendered_argument = strndup(argument.start, argument.len);
+			char *rendered_argument = strndup(argument.start, new_len);
 
 			/* Pass it to the filter function. */
 			char *filter_result = filter->filter_func(rendered_argument);
 
-			vishnu(&to_return, filter_matches[0], filter_result, operating_line);
+			vishnu(&new_line_to_add, whole_match, filter_result, operating_line);
 
 			if (filter->clean_up != NULL)
 				filter->clean_up(filter_result);
 
 			free(rendered_argument);
-			return to_return;
 		}
 		assert(filter != NULL);
+
+		free(interpolated_line.data);
+		interpolated_line.size = new_line_to_add.size;
+		interpolated_line.data = new_line_to_add.data;
+		new_line_to_add.size = 0;
+		new_line_to_add.data = NULL;
+		operating_line = &interpolated_line;
+
+		/* Set the next regex check after this one. */
+		memset(filter_matches, 0, sizeof(filter_matches));
 	}
 
-	/* We didn't match any filters. Just return the operating line. */
 	return *operating_line;
 }
 
@@ -311,10 +375,69 @@ static line
 _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const struct compiled_regex *all_regex) {
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
-	match_t match[2];
 	const line *operating_line = &current_line;
 	assert(operating_line->data != NULL);
 
+	match_t cvar_match[3];
+	/* We're using different variables here. */
+	while (regexec_2_0_beta(&all_regex->c_cvar_regex, operating_line->data, 3, cvar_match) == 0) {
+		const match_t inner_match = cvar_match[1];
+		const match_t subname_match = cvar_match[2];
+		assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
+		assert(subname_match.rm_so != -1 && subname_match.rm_eo != -1);
+
+		const greshunkel_tuple *tuple;
+		char just_match_str[inner_match.len + 1];
+		just_match_str[inner_match.len] = '\0';
+		strncpy(just_match_str, inner_match.start, inner_match.len);
+
+		/* So here we search for a sub context instead of a string. */
+		if ((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_SUBCTEXT) {
+			const greshunkel_ctext *sub_ctext = tuple->value.sub_ctext;
+
+			char just_subname_match_str[subname_match.len + 1];
+			just_subname_match_str[subname_match.len] = '\0';
+			strncpy(just_subname_match_str, subname_match.start, subname_match.len);
+			/* So now we need to:
+			 * 1. Loop through the subcontext's values searching for subname_match
+			 * 2. Inteprolate using that value.
+			 */
+
+			unsigned int i;
+			for (i = 0; i < sub_ctext->values->count; i++) {
+				const greshunkel_tuple *sub_tuple = vector_get(sub_ctext->values, i);
+				const char *_name = sub_tuple->name;
+				const size_t larger = strlen(_name) > strlen(just_subname_match_str) ?
+						strlen(_name) : strlen(just_subname_match_str);
+
+				if (strncmp(_name, just_subname_match_str, larger) == 0) {
+					/* TODO: Only works on strings. */
+					assert(sub_tuple->type == GSHKL_STR);
+					vishnu(&new_line_to_add, cvar_match[0], sub_tuple->value.str, operating_line);
+					goto done;
+				}
+			}
+		} else {
+			/* Blow up if we had a variable that wasn't in the context. */
+			printf("Did not match a cvariable that needed to be matched.\n");
+			printf("Line: %s\n", operating_line->data);
+			assert(tuple != NULL);
+			assert(tuple->type == GSHKL_SUBCTEXT);
+		}
+
+done:
+		free(interpolated_line.data);
+		interpolated_line.size = new_line_to_add.size;
+		interpolated_line.data = new_line_to_add.data;
+		new_line_to_add.size = 0;
+		new_line_to_add.data = NULL;
+		operating_line = &interpolated_line;
+
+		/* Set the next regex check after this one. */
+		memset(cvar_match, 0, sizeof(cvar_match));
+	}
+
+	match_t match[2];
 	while (regexec_2_0_beta(&all_regex->c_var_regex, operating_line->data, 2, match) == 0) {
 		const match_t inner_match = match[1];
 		assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
@@ -408,14 +531,24 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		unsigned int j;
 		for (j = 0; j < cur_vector_p->count; j++) {
 			const greshunkel_tuple *current_loop_var = vector_get(cur_vector_p, j);
-			/* TODO: For now, only strings are supported in arrays. */
-			assert(current_loop_var->type == GSHKL_STR);
-
-			/* Recurse contexts until my fucking mind melts. */
-			greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
-			gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
-			line rendered_piece = _interpolate_line(_temp_ctext, to_render_line, all_regex);
-			gshkl_free_context(_temp_ctext);
+			line rendered_piece;
+			if (current_loop_var->type == GSHKL_STR) {
+				/* Recurse contexts until my fucking mind melts. */
+				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
+				gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
+				rendered_piece = _interpolate_line(_temp_ctext, to_render_line, all_regex);
+				gshkl_free_context(_temp_ctext);
+			} else if (current_loop_var->type == GSHKL_SUBCTEXT) {
+				/* Recurse contexts until my fucking mind melts. */
+				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
+				gshkl_add_sub_context(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.sub_ctext);
+				rendered_piece = _interpolate_line(_temp_ctext, to_render_line, all_regex);
+				gshkl_free_context(_temp_ctext);
+			} else {
+				printf("Weird type given during loop interpolation.");
+				printf("Line: %s\n", buf);
+				assert(1 == 0);
+			}
 
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;
@@ -434,6 +567,9 @@ static inline void _compile_regex(struct compiled_regex *all_regex) {
 	int reti = regcomp(&all_regex->c_var_regex, variable_regex, REG_EXTENDED);
 	assert(reti == 0);
 
+	reti = regcomp(&all_regex->c_cvar_regex, ctext_variable_regex, REG_EXTENDED);
+	assert(reti == 0);
+
 	reti = regcomp(&all_regex->c_loop_regex, loop_regex, REG_EXTENDED);
 	assert(reti == 0);
 
@@ -446,6 +582,7 @@ static inline void _compile_regex(struct compiled_regex *all_regex) {
 
 static inline void _destroy_regex(struct compiled_regex *all_regex) {
 	regfree(&all_regex->c_var_regex);
+	regfree(&all_regex->c_cvar_regex);
 	regfree(&all_regex->c_loop_regex);
 	regfree(&all_regex->c_filter_regex);
 	regfree(&all_regex->c_include_regex);
@@ -457,7 +594,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 
 	/* We start up a new buffer and copy the old one into it: */
 	char *rendered = NULL;
-	*outsize = 0;
+	size_t intermediate_outsize = 0;
 
 	struct compiled_regex all_regex;
 	_compile_regex(&all_regex);
@@ -483,10 +620,10 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		}
 
 		/* Fuck this */
-		const size_t old_outsize = *outsize;
-		*outsize += to_append.size;
+		const size_t old_outsize = intermediate_outsize;
+		intermediate_outsize += to_append.size;
 		{
-			char *med_buf = realloc(rendered, *outsize);
+			char *med_buf = realloc(rendered, intermediate_outsize);
 			if (med_buf == NULL)
 				goto error;
 			rendered = med_buf;
@@ -497,11 +634,13 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		free(to_append.data);
 	}
 	_destroy_regex(&all_regex);
-	rendered[*outsize - 1] = '\0';
+	rendered[intermediate_outsize - 1] = '\0';
+
+	if (outsize)
+		*outsize = intermediate_outsize;
 	return rendered;
 
 error:
 	free(rendered);
-	*outsize = 0;
 	return NULL;
 }

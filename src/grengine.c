@@ -13,8 +13,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <oleg-http/http.h>
-
 #include "grengine.h"
 #include "greshunkel.h"
 #include "utils.h"
@@ -52,6 +50,7 @@ struct {
 	{".jpg", "image/jpeg"},
 	{".txt", "text/plain"},
 	{".html", "text/html"},
+	{".svg", "image/svg+xml"},
 	{".ico", "image/x-icon"},
 	{".webm", "video/webm"},
 	{".gif", "image/gif"},
@@ -146,6 +145,7 @@ static int mmap_file_ol(const char *file_path, http_response *response,
 	if (fd <= 0) {
 		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
+		perror("mmap_file_ol: could not open file");
 		free(response->extra_data);
 		response->extra_data = NULL;
 		close(fd);
@@ -251,10 +251,10 @@ static void log_request(const http_request *request, const http_response *respon
 	char *visitor_ip_addr = get_header_value(request->full_header, strlen(request->full_header), "X-Real-IP");
 	char *user_agent = get_header_value(request->full_header, strlen(request->full_header), "User-Agent");
 
-	if (!visitor_ip_addr)
+	if (visitor_ip_addr == NULL)
 		visitor_ip_addr = "NOIP";
 
-	if (!user_agent)
+	if (user_agent == NULL)
 		user_agent = "NOUSERAGENT";
 
 	log_msg(LOG_FUN, "%s \"%s %s\" %i %i \"%s\"",

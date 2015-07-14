@@ -12,7 +12,7 @@
 /* xXx DEFINE=MAX_GSHKL_STR_SIZE xXx
  * xXx DESCRIPTION=The maximum size of a greshunkel string. xXx
  */
-#define MAX_GSHKL_STR_SIZE 256
+#define MAX_GSHKL_STR_SIZE 512
 
 /* AND HE DECREED: */
 /* STRINGS SHALL NEVER BE MORE THAN 256 OCTETS! */
@@ -20,15 +20,28 @@
 /* VARIABLE NAMES SHALL NEVER BE MORE THAN 32 CHARACTERS! */
 struct greshunkel_tuple;
 
+/* xXx STRUCT=greshunkel_ctext xXx
+ * xXx DESCRIPTION=The context is a collection of variables, filters and other stuff that will be used to render a file. xXx
+ * xXx *values=The values stored in this context. Strings, arrays, etc. xXx
+ * xXx *filter_functions=The filter functions stored in this context. xXx
+ * xXx *parent=Used internally, this is used to recurse back up to the parent context if a variable is unavailable in the current one. xXx
+ */
+typedef struct greshunkel_ctext {
+	vector *values;
+	vector *filter_functions;
+	const struct greshunkel_ctext *parent;
+} greshunkel_ctext;
+
 /* xXx UNION=greshunkel_var xXx
  * xXx DESCRIPTION=A variable in GRESHUNKEL. xXx
  * xXx str[MAX_GSHKL_STR_SIZE + 1]=If this var is a string, this will hold the string. xXx
  * xXx *arr=If this var is an array, this will hold the vector for that array. xXx
+ * xXx *sub_ctext=If this var is a sub context, this will hold the sub context for the variable. xXx
  */
 typedef union greshunkel_var {
-	const unsigned int fuck_gcc : 1; /* This tricks GCC into doing smart things. Not used. */
 	char str[MAX_GSHKL_STR_SIZE + 1];
 	vector *arr;
+	const greshunkel_ctext *sub_ctext;
 } greshunkel_var;
 
 /* xXx ENUM=greshunkel_type xXx
@@ -38,7 +51,8 @@ typedef union greshunkel_var {
  */
 typedef enum {
 	GSHKL_ARR,
-	GSHKL_STR
+	GSHKL_STR,
+	GSHKL_SUBCTEXT
 } greshunkel_type;
 
 /* xXx STRUCT=greshunkel_named_item xXx
@@ -72,18 +86,6 @@ typedef struct greshunkel_filter {
 	char *(*filter_func)(const char *argument);
 	void (*clean_up)(char *result);
 } greshunkel_filter;
-
-/* xXx STRUCT=greshunkel_ctext xXx
- * xXx DESCRIPTION=The context is a collection of variables, filters and other stuff that will be used to render a file. xXx
- * xXx *values=The values stored in this context. Strings, arrays, etc. xXx
- * xXx *filter_functions=The filter functions stored in this context. xXx
- * xXx *parent=Used internally, this is used to recurse back up to the parent context if a variable is unavailable in the current one. xXx
- */
-typedef struct greshunkel_ctext {
-	vector *values;
-	vector *filter_functions;
-	const struct greshunkel_ctext *parent;
-} greshunkel_ctext;
 
 /* xXx FUNCTION=gshkl_init_context xXx
  * xXx DESCRIPTION=Used to create a new, empty GRESHUNKEL context. xXx
@@ -140,6 +142,25 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value);
  * xXx value=The integer to be added. xXx
  */
 int gshkl_add_int_to_loop(greshunkel_var *loop, const int value);
+
+/* xXx FUNCTION=gshkl_add_sub_context_to_loop xXx
+ * xXx DESCRIPTION=Adds a name sub-context to a loop. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *loop=The loop to add the context to. xXx
+ * xXx *child=The pre-built child context. xXx
+ */
+int gshkl_add_sub_context_to_loop(greshunkel_var *loop, const greshunkel_ctext *child);
+
+/* Sub-context management */
+
+/* xXx FUNCTION=gshkl_add_sub_context xXx
+ * xXx DESCRIPTION=Adds a name sub-context to a parent context. Sub-context values can be references via the 'xXx @<name>.<value> xXx' syntax. Contexts added in this way will be freed by the parent. xXx
+ * xXx RETURNS=0 on success, 1 otherwise. xXx
+ * xXx *parent=The parent context to add the child to. xXx
+ * xXx name=The name of the child context. xXx
+ * xXx *child=The pre-built child context. xXx
+ */
+int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[WISDOM_OF_WORDS], const greshunkel_ctext *child);
 
 /* Filters management */
 

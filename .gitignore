@@ -7,3 +7,5 @@ greshunkel_test
 unit_test
 ./webms
 .vagrant
+*.so
+python/__pycache__/
