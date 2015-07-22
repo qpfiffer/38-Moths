@@ -102,21 +102,20 @@ static void *responder(void *arg) {
 	}
 
 	while(1) {
-		handled_request req;
-		ssize_t msg_size = mq_receive(handled_queue, (char *)&req, sizeof(handled_request), NULL);
+		handled_request *req = NULL;
+		ssize_t msg_size = mq_receive(handled_queue, (char *)&req, sizeof(handled_request *), NULL);
 
 		if (msg_size == -1) {
 			log_msg(LOG_ERR, "Responder: Could not read from handled_queue.");
+			perror("Responder: ");
 			break;
 		}else {
-			int accept_fd = req.accept_fd;
-			handled_request *new_req = send_response(&req);
+			handled_request *new_req = send_response(req);
 			if (new_req != NULL) {
-				ssize_t msg_size = mq_send(handled_queue, (char *)new_req, sizeof(handled_request), 0);
+				ssize_t msg_size = mq_send(handled_queue, (char *)&new_req, sizeof(handled_request *), 0);
 				if (msg_size == -1)
 					log_msg(LOG_ERR, "Responder: Could not enqueue handled response.");
 			} else {
-				close(accept_fd);
 				log_msg(LOG_FUN, "Responder: Response sent.");
 			}
 		}
@@ -163,7 +162,7 @@ static void *handler(void *arg) {
 			log_msg(LOG_FUN, "Worker %i: Handling response.", worker_ident);
 			handled_request *req = generate_response(new_fd, all_routes, num_routes);
 
-			ssize_t msg_size = mq_send(handled_queue, (char *)req, sizeof(handled_request), 0);
+			ssize_t msg_size = mq_send(handled_queue, (char *)&req, sizeof(handled_request *), 0);
 			if (msg_size == -1)
 				log_msg(LOG_ERR, "Worker %i: Could not enqueue handled response.", worker_ident);
 		}
@@ -243,6 +242,10 @@ int http_serve(int *main_sock_fd,
 		log_msg(LOG_INFO, "Purged old socket queue.");
 	}
 
+	if (mq_unlink(HANDLED_CONNECTION_QUEUE_NAME) == 0) {
+		log_msg(LOG_INFO, "Purged old handled queue.");
+	}
+
 	/* We precreate the queue here to guarantee that everyone else will have access to it. */
 	po_accepted_queue = _open_queue(ACCEPTED_SOCKET_QUEUE_NAME, O_RDWR | O_CREAT, sizeof(int));
 	if (po_accepted_queue == -1) {
@@ -251,7 +254,7 @@ int http_serve(int *main_sock_fd,
 		goto error;
 	}
 
-	po_handled_queue = _open_queue(HANDLED_CONNECTION_QUEUE_NAME, O_RDWR | O_CREAT, sizeof(handled_request));
+	po_handled_queue = _open_queue(HANDLED_CONNECTION_QUEUE_NAME, O_RDWR | O_CREAT, sizeof(handled_request *));
 	if (po_accepted_queue == -1) {
 		log_msg(LOG_ERR, "Could not preopen handled socket queue..");
 		perror("Main Thread");

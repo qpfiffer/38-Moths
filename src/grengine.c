@@ -437,7 +437,7 @@ handled_request *send_response(handled_request *hreq) {
 	const route *matching_route = hreq->matching_route;
 
 	const size_t bytes_left = hreq->response_len - hreq->sent;
-	const size_t to_send = 4096 > bytes_left ? 4096 : bytes_left;
+	const size_t to_send = bytes_left < 4096 ? bytes_left : 4096;
 	int rc = send(hreq->accept_fd, hreq->response_bytes, bytes_siz, 0);
 	if (rc <= 0) {
 		log_msg(LOG_ERR, "Could not send response.");
@@ -446,22 +446,26 @@ handled_request *send_response(handled_request *hreq) {
 
 	hreq->sent += to_send;
 
-	if (hreq->response_len - hreq->sent == 0) {
+	if (hreq->response_len - hreq->sent <= 0) {
 		if (matching_route->cleanup != NULL) {
 			log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
 			matching_route->cleanup(hreq->response_code, &hreq->response);
 		}
+		close(hreq->accept_fd);
 		free(hreq->response_bytes);
+		free(hreq);
 
-		return hreq;
+		return NULL;
 	}
 
-	return NULL;
+	return hreq;
 
 error:
 	if (matching_route != NULL)
 		matching_route->cleanup(500, &hreq->response);
+	close(hreq->accept_fd);
 	free(hreq->response_bytes);
+	free(hreq);
 
 	return NULL;
 }
