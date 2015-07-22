@@ -414,6 +414,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	hreq = malloc(sizeof(handled_request));
 	hreq->response_bytes = actual_response;
 	hreq->response_len = actual_response_siz;
+	hreq->response_code = response_code;
 	hreq->accept_fd = accept_fd;
 	hreq->sent = 0;
 	hreq->matching_route = matching_route;
