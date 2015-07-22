@@ -71,6 +71,16 @@ typedef struct route {
 	void (*cleanup)(const int status_code, http_response *response);
 } route;
 
+typedef struct handled_request {
+	char *response_bytes;
+	size_t response_len;
+	int accept_fd;
+	int response_code;
+	size_t sent;
+	const route *matching_route;
+	http_response response;
+} handled_request;
+
 /* xXx FUNCTION=mmap_file xXx
  * xXx DESCRIPTION=The primary way of serving static assets in 38-Moths. mmap()'s a file into memory and writes it to the requester. xXx
  * xXx RETURNS=An HTTP status code. 200 on success, 404 on not found, etc. xXx
@@ -104,12 +114,14 @@ void heap_cleanup(const int status_code, http_response *response);
  */
 void mmap_cleanup(const int status_code, http_response *response);
 
-/* xXx FUNCTION=respond xXx
- * xXx DESCRIPTION=This is how the HTTP server writes to requester's file sockets. xXx
- * xXx RETURNS=0 on success, -1 otherwise. xXx
+/* xXx FUNCTION=generate_response xXx
+ * xXx DESCRIPTION=Generates and HTTP response from an accepted connection xXx
+ * xXx RETURNS=A fully formatted HTTP response, NULL otherwise. xXx
  * xXx accept_fd=The successfully <code>accept(2)</code>'d file descriptor for the requester's socket. xXx
  * xXx *all_routes=The array of all routes for your application. xXx
  * xXx route_num_elements=The number of routes in <code>*all_routes</code>. xXx
  */
-int respond(const int accept_fd, const route *all_routes, const size_t route_num_elements);
+handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements);
+
+int send_response(handled_request *hreq);
 

@@ -268,13 +268,14 @@ static void log_request(const http_request *request, const http_response *respon
 		free(user_agent);
 }
 
-int respond(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
+handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
 	char *to_read = calloc(1, MAX_READ_LEN);
 	char *actual_response = NULL;
 	http_response response = {
 		.mimetype = {0},
 		0
 	};
+	handled_request *hreq = NULL;
 	const route *matching_route = NULL;
 
 	int rc = recv(accept_fd, to_read, MAX_READ_LEN, 0);
@@ -410,26 +411,48 @@ int respond(const int accept_fd, const route *all_routes, const size_t route_num
 
 	log_request(&request, &response, response_code);
 
-	/* Send that shit over the wire: */
-	const size_t bytes_siz = actual_response_siz;
-	rc = send(accept_fd, actual_response, bytes_siz, 0);
-	if (rc <= 0) {
-		log_msg(LOG_ERR, "Could not send response.");
-		goto error;
-	}
-	if (matching_route->cleanup != NULL) {
-		log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
-		matching_route->cleanup(response_code, &response);
-	}
-	free(actual_response);
-	free(to_read);
+	hreq = malloc(sizeof(handled_request));
+	hreq->response_bytes = actual_response;
+	hreq->response_len = actual_response_siz;
+	hreq->accept_fd = accept_fd;
+	hreq->sent = 0;
+	hreq->matching_route = matching_route;
+	memcpy(&hreq->response, &response, sizeof(response));
 
-	return 0;
+	free(to_read);
+	return hreq;
 
 error:
 	if (matching_route != NULL)
 		matching_route->cleanup(500, &response);
 	free(actual_response);
 	free(to_read);
+	return NULL;
+}
+
+int send_response(handled_request *hreq) {
+	/* Send that shit over the wire: */
+	const size_t bytes_siz = hreq->response_len;
+	const route *matching_route = hreq->matching_route;
+
+	int rc = send(hreq->accept_fd, hreq->response_bytes, bytes_siz, 0);
+	if (rc <= 0) {
+		log_msg(LOG_ERR, "Could not send response.");
+		goto error;
+	}
+	if (matching_route->cleanup != NULL) {
+		log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
+		matching_route->cleanup(hreq->response_code, &hreq->response);
+	}
+	free(hreq->response_bytes);
+	free(hreq);
+
+	return 0;
+
+error:
+	if (matching_route != NULL)
+		matching_route->cleanup(500, &hreq->response);
+	free(hreq->response_bytes);
+	free(hreq);
 	return -1;
 }

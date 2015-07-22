@@ -115,7 +115,8 @@ static void *worker(void *arg) {
 			break;
 		} else {
 			log_msg(LOG_FUN, "Worker %i: Handling response.", worker_ident);
-			respond(new_fd, all_routes, num_routes);
+			handled_request *req = generate_response(new_fd, all_routes, num_routes);
+			send_response(req);
 			close(new_fd);
 			log_msg(LOG_FUN, "Worker %i: Response handled.", worker_ident);
 		}
