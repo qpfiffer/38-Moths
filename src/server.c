@@ -110,9 +110,15 @@ static void *responder(void *arg) {
 			break;
 		}else {
 			int accept_fd = req.accept_fd;
-			send_response(&req);
-			close(accept_fd);
-			log_msg(LOG_FUN, "Responder: Response sent.");
+			handled_request *new_req = send_response(&req);
+			if (new_req != NULL) {
+				ssize_t msg_size = mq_send(handled_queue, (char *)new_req, sizeof(handled_request), 0);
+				if (msg_size == -1)
+					log_msg(LOG_ERR, "Responder: Could not enqueue handled response.");
+			} else {
+				close(accept_fd);
+				log_msg(LOG_FUN, "Responder: Response sent.");
+			}
 		}
 	}
 

@@ -431,28 +431,37 @@ error:
 	return NULL;
 }
 
-int send_response(handled_request *hreq) {
+handled_request *send_response(handled_request *hreq) {
 	/* Send that shit over the wire: */
 	const size_t bytes_siz = hreq->response_len;
 	const route *matching_route = hreq->matching_route;
 
+	const size_t bytes_left = hreq->response_len - hreq->sent;
+	const size_t to_send = 4096 > bytes_left ? 4096 : bytes_left;
 	int rc = send(hreq->accept_fd, hreq->response_bytes, bytes_siz, 0);
 	if (rc <= 0) {
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;
 	}
-	if (matching_route->cleanup != NULL) {
-		log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
-		matching_route->cleanup(hreq->response_code, &hreq->response);
-	}
-	free(hreq->response_bytes);
 
-	return 0;
+	hreq->sent += to_send;
+
+	if (hreq->response_len - hreq->sent == 0) {
+		if (matching_route->cleanup != NULL) {
+			log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
+			matching_route->cleanup(hreq->response_code, &hreq->response);
+		}
+		free(hreq->response_bytes);
+
+		return hreq;
+	}
+
+	return NULL;
 
 error:
 	if (matching_route != NULL)
 		matching_route->cleanup(500, &hreq->response);
 	free(hreq->response_bytes);
-	free(hreq);
-	return -1;
+
+	return NULL;
 }

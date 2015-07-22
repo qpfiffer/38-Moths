@@ -123,5 +123,10 @@ void mmap_cleanup(const int status_code, http_response *response);
  */
 handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements);
 
-int send_response(handled_request *hreq);
+/* xXx FUNCTION=send_response xXx
+ * xXx DESCRIPTION=Takes a handled_request object rom generate_response and sends chunks of it down the wire. xXx
+ * xXx RETURNS=If there is anything left to send, an updated handled_request will be returned. NULL will be reutnred when the object has either been fully sent, or errored out. xXx
+ * xXx *hreq=A handled_request object either from send_response or generate_response. xXx
+ */
+handled_request *send_response(handled_request *hreq);
 
