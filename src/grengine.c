@@ -446,7 +446,6 @@ int send_response(handled_request *hreq) {
 		matching_route->cleanup(hreq->response_code, &hreq->response);
 	}
 	free(hreq->response_bytes);
-	free(hreq);
 
 	return 0;
 
