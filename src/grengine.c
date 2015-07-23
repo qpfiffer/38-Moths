@@ -433,12 +433,11 @@ error:
 
 handled_request *send_response(handled_request *hreq) {
 	/* Send that shit over the wire: */
-	const size_t bytes_siz = hreq->response_len;
 	const route *matching_route = hreq->matching_route;
 
 	const size_t bytes_left = hreq->response_len - hreq->sent;
 	const size_t to_send = bytes_left < 4096 ? bytes_left : 4096;
-	int rc = send(hreq->accept_fd, hreq->response_bytes, bytes_siz, 0);
+	int rc = send(hreq->accept_fd, hreq->response_bytes + hreq->sent, to_send, 0);
 	if (rc <= 0) {
 		log_msg(LOG_ERR, "Could not send response.");
 		goto error;

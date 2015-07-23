@@ -109,7 +109,9 @@ static void *responder(void *arg) {
 			log_msg(LOG_ERR, "Responder: Could not read from handled_queue.");
 			perror("Responder: ");
 			break;
-		}else {
+		} else if (req == NULL) {
+			log_msg(LOG_ERR, "Responder: Got bogus request from queue.");
+		} else {
 			handled_request *new_req = send_response(req);
 			if (new_req != NULL) {
 				ssize_t msg_size = mq_send(handled_queue, (char *)&new_req, sizeof(handled_request *), 0);
