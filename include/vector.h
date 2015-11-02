@@ -33,6 +33,14 @@ vector *vector_new(const size_t item_size, const size_t initial_element_count);
  */
 int vector_append(vector *vec, const void *item, const size_t item_size);
 
+/* xXx FUNCTION=vector_append_ptr xXx
+ * xXx DESCRIPTION=Similar to vector_append but copies just the pointer value, not what it points to. xXx
+ * xXx RETURNS=1 on success. xXx
+ * xXx *vec=The vector to add the pointer to. xXx
+ * xXx *pointer=The item to add to the vector. xXx
+ */
+int vector_append_ptr(vector *vec, const void *pointer);
+
 /* xXx FUNCTION=vector_get xXx
  * xXx DESCRIPTION=Gets the nth element of the given vector. xXx
  * xXx RETURNS=A constant pointer to the nth item in the vector. xXx

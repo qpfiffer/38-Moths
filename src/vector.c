@@ -42,6 +42,23 @@ inline int vector_append(vector *vec, const void *item, const size_t item_size) 
 	return 1;
 }
 
+inline int vector_append_ptr(vector *vec, const void *pointer) {
+	if (vec->item_size != sizeof(pointer))
+		return 0;
+
+	if (vec->count == vec->max_size) {
+		vec->max_size *= 2;
+		void *array = realloc(vec->items, (vec->max_size * vec->item_size));
+		if (!array)
+			return 0;
+		vec->items = array;
+	}
+
+	memcpy(nth(vec->count), &pointer, sizeof(void *));
+	vec->count++;
+	return 1;
+}
+
 inline const void *vector_get(const vector *vec, const unsigned int i) {
 	if (i > vec->max_size)
 		return NULL;

@@ -41,6 +41,34 @@ int test_vector() {
 	return 0;
 }
 
+int test_vector_ptr_append() {
+	vector *vec = vector_new(sizeof(uint64_t), 2);
+
+	uint32_t i = 0;
+	for (i = 0; i < 100; i++) {
+		char buf[128] = {0};
+		char *duped = NULL;
+		snprintf(buf, sizeof(buf), "%u", i);
+		duped = strndup(buf, sizeof(buf));
+
+		vector_append_ptr(vec, duped);
+	}
+
+	for (i = 0; i < vec->count; i++) {
+		char buf[128] = {0};
+		snprintf(buf, sizeof(buf), "%u", i);
+
+		char **str = (char **)vector_get(vec, i);
+
+		assert(strncmp(buf, *str, sizeof(buf)) == 0);
+		free(*str);
+	}
+
+	vector_free(vec);
+
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	UNUSED(argc);
 	UNUSED(argv);
@@ -51,6 +79,7 @@ int main(int argc, char *argv[]) {
 	int tests_failed = 0;
 
 	run_test(test_vector);
+	run_test(test_vector_ptr_append);
 
 	log_msg(LOG_INFO, "Tests passed: (%i/%i).\n", tests_run, tests_run + tests_failed);
 
