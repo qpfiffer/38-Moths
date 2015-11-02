@@ -183,7 +183,7 @@ static void *handler(void *arg) {
 	return NULL;
 }
 
-static inline int create_socket() {
+static inline int create_socket(const int port) {
 	int rc = -1;
 	int sock_fd = socket(PF_INET, SOCK_STREAM, 0);
 	if (sock_fd <= 0) {
@@ -194,7 +194,6 @@ static inline int create_socket() {
 	int opt = 1;
 	setsockopt(sock_fd, SOL_SOCKET, SO_REUSEADDR, (void*) &opt, sizeof(opt));
 
-	const int port = 8080;
 	struct sockaddr_in hints = {0};
 	hints.sin_family		 = AF_INET;
 	hints.sin_port			 = htons(port);
@@ -221,6 +220,7 @@ error:
 }
 
 int http_serve(int *main_sock_fd,
+		const int port,
 		const int num_threads,
 		const struct route *routes,
 		const size_t num_routes) {
@@ -233,7 +233,7 @@ int http_serve(int *main_sock_fd,
 	/* The acceptor listens and accepts new connections, and enqueues them: */
 	pthread_t acceptor_enqueuer;
 
-	*main_sock_fd = create_socket();
+	*main_sock_fd = create_socket(port);
 	if (*main_sock_fd < 0)
 		goto error;
 
