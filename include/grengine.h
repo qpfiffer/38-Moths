@@ -32,12 +32,15 @@
  * xXx verb=The HTTP verb for the given request. xXx
  * xXx resource[128]=The path for this request. (eg. '/articles/182') xXx
  * xXx matches=Any REGEX matches from your path are stored here. xXx
+ * xXx full_header=The full header text of the request. xXx
+ * xXx full_body=The full body. xXx
  */
 typedef struct {
 	char verb[VERB_SIZE];
 	char resource[128];
 	regmatch_t matches[MAX_MATCHES];
 	char *full_header;
+	unsigned char *full_body;
 } http_request;
 
 /* xXx STRUCT=http_request xXx

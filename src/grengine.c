@@ -265,6 +265,7 @@ static void log_request(const http_request *request, const http_response *respon
 
 handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
 	char *to_read = calloc(1, MAX_READ_LEN);
+	char *full_header = NULL;
 	char *actual_response = NULL;
 	http_response response = {
 		.mimetype = {0},
@@ -279,11 +280,30 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		goto error;
 	}
 
+	/* Parse full header here. */
+	size_t header_length = 0;
+	while (header_length + 4 < MAX_READ_LEN) {
+		if (to_read[header_length] == '\r' &&
+		to_read[header_length] == '\n' &&
+		to_read[header_length] == '\r' &&
+		to_read[header_length] == '\n')
+			break;
+		header_length++;
+	}
+
+	if (header_length == MAX_READ_LEN) {
+		log_msg(LOG_ERR, "Could not find end of header.");
+		goto error;
+	}
+
+	full_header = strndup(to_read, header_length);
+
 	http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
-		.full_header = to_read
+		.full_header = full_header,
+		.full_body = NULL
 	};
 	rc = parse_request(to_read, &request);
 	if (rc != 0) {
@@ -416,6 +436,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	memcpy(&hreq->response, &response, sizeof(response));
 
 	free(to_read);
+	free(full_header);
 	return hreq;
 
 error:
@@ -423,6 +444,7 @@ error:
 		matching_route->cleanup(500, &response);
 	free(actual_response);
 	free(to_read);
+	free(full_header);
 	return NULL;
 }
 
