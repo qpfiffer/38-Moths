@@ -227,11 +227,6 @@ static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
 	const size_t verb_size = c_verb_size >= sizeof(out->verb) ? sizeof(out->verb) - 1: c_verb_size;
 	strncpy(out->verb, to_read, verb_size);
 
-	if (strncmp(out->verb, "GET", verb_size) != 0) {
-		log_msg(LOG_WARN, "Don't know verb %s.", out->verb);
-		goto error;
-	}
-
 	const char *res_offset = verb_end + sizeof(char);
 	const char *resource_end = strnstr(res_offset, " ", sizeof(out->resource));
 	if (resource_end == NULL)

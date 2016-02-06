@@ -21,6 +21,6 @@ static const route all_routes[] = {
 };
 
 int main(int argc, char *argv[]) {
-	http_serve(&main_sock_fd, 2, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
+	http_serve(&main_sock_fd, 8080, 2, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
 	return 0;
 }
