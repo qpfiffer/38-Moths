@@ -1,8 +1,8 @@
 VERSION=0.1
-CFLAGS=-Werror -Wno-missing-field-initializers -Wextra -Wall -O3 -ffunction-sections -fdata-sections -g
+CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O3 -ffunction-sections -fdata-sections -g
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
-COMMON_OBJ=utils.o vector.o logging.o
+COMMON_OBJ=simple_sparsehash.o utils.o vector.o logging.o
 NAME=lib38moths.so
 
 PREFIX?=/usr/local
