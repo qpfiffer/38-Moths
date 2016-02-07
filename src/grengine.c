@@ -292,7 +292,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	}
 
 	if (header_length == MAX_READ_LEN) {
-		log_msg(LOG_ERR, "Could not find end of header.");
+		log_msg(LOG_ERR, "Could not find end of HTTP header.");
 		goto error;
 	}
 
@@ -310,6 +310,11 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		log_msg(LOG_ERR, "Could not parse request.");
 		goto error;
 	}
+
+	/* Parse the body into something useful. */
+	char *clength = get_header_value(full_header, header_length, "Content-Length");
+	if (clength == NULL)
+		log_msg(LOG_WARN, "Could not parse content length.");
 
 	/* Find our matching route: */
 	unsigned int i;
