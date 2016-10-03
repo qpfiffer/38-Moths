@@ -531,7 +531,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		unsigned int j;
 		for (j = 0; j < cur_vector_p->count; j++) {
 			const greshunkel_tuple *current_loop_var = vector_get(cur_vector_p, j);
-			line rendered_piece;
+			line rendered_piece = {0};
 			if (current_loop_var->type == GSHKL_STR) {
 				/* Recurse contexts until my fucking mind melts. */
 				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
