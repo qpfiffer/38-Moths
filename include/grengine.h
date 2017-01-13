@@ -43,7 +43,7 @@ typedef struct {
 	unsigned char *full_body;
 } http_request;
 
-/* xXx STRUCT=http_request xXx
+/* xXx STRUCT=http_response xXx
 * xXx DESCRIPTION=Fill this out and return it, signed by your parents. Only <code>*out</code> and <code>outsize</code> are really necessary. xXx
 * xXx *out=A buffer of characters that will be written back to the requester. xXx
 * xXx outsize=The size of <code>out</code>.
