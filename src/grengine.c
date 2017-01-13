@@ -267,6 +267,7 @@ static void log_request(const http_request *request, const http_response *respon
 handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
 	char *to_read = calloc(1, MAX_READ_LEN);
 	char *full_header = NULL;
+	unsigned char *full_body = NULL;
 	char *actual_response = NULL;
 	http_response response = {
 		.mimetype = {0},
@@ -274,48 +275,67 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	};
 	handled_request *hreq = NULL;
 	const route *matching_route = NULL;
+	size_t num_read = 0;
+	int rc = 0;
 
-	int rc = recv(accept_fd, to_read, MAX_READ_LEN, 0);
-	if (rc <= 0) {
-		log_msg(LOG_ERR, "Did not receive any information from accepted connection.");
-		goto error;
+	//num_read = recv(accept_fd, to_read, MAX_READ_LEN, 0);
+	size_t read_this_time = 0;
+	while ((read_this_time = recv(accept_fd, to_read, MAX_READ_LEN, 0))) {
+		num_read += read_this_time;
+		if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
+			break;
+		read_this_time = 0;
 	}
 
 	/* Parse full header here. */
 	size_t header_length = 0;
 	while (header_length + 4 < MAX_READ_LEN) {
 		if (to_read[header_length] == '\r' &&
-		to_read[header_length] == '\n' &&
-		to_read[header_length] == '\r' &&
-		to_read[header_length] == '\n')
+		to_read[header_length + 1] == '\n' &&
+		to_read[header_length + 2] == '\r' &&
+		to_read[header_length + 3] == '\n') {
+			header_length += 4;
 			break;
+		}
 		header_length++;
 	}
 
-	if (header_length == MAX_READ_LEN) {
+	if (header_length == num_read) {
 		log_msg(LOG_ERR, "Could not find end of HTTP header.");
 		goto error;
 	}
 
 	full_header = strndup(to_read, header_length);
 
+	/* Parse the body into something useful. */
+	char *clength = get_header_value(full_header, header_length, "Content-Length");
+	size_t clength_num = 0;
+	if (clength == NULL) {
+		log_msg(LOG_WARN, "Could not parse content length.");
+	} else {
+		clength_num = atoi(clength);
+	}
+
+	if (num_read - header_length > 0) {
+		full_body = (unsigned char *)strndup(to_read + header_length, num_read - header_length);
+	} else if (clength_num > 0 && clength_num < (size_t)num_read) {
+		full_body = (unsigned char *)strndup(to_read + header_length, clength_num);
+	} else {
+		full_body = NULL;
+	}
+
 	http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
 		.full_header = full_header,
-		.full_body = NULL
+		.full_body = full_body
 	};
 	rc = parse_request(to_read, &request);
 	if (rc != 0) {
 		log_msg(LOG_ERR, "Could not parse request.");
 		goto error;
 	}
-
-	/* Parse the body into something useful. */
-	char *clength = get_header_value(full_header, header_length, "Content-Length");
-	if (clength == NULL)
-		log_msg(LOG_WARN, "Could not parse content length.");
 
 	/* Find our matching route: */
 	unsigned int i;
@@ -443,6 +463,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 
 	free(to_read);
 	free(full_header);
+	free(full_body);
 	return hreq;
 
 error:
@@ -451,6 +472,7 @@ error:
 	free(actual_response);
 	free(to_read);
 	free(full_header);
+	free(full_body);
 	return NULL;
 }
 
