@@ -634,7 +634,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		free(to_append.data);
 	}
 	_destroy_regex(&all_regex);
-	rendered[intermediate_outsize - 1] = '\0';
+	/* rendered[intermediate_outsize - 1] = '\0'; */
 
 	if (outsize)
 		*outsize = intermediate_outsize;
