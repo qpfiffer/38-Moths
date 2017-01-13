@@ -289,18 +289,20 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 
 	/* Parse full header here. */
 	size_t header_length = 0;
-	while (header_length + 4 < MAX_READ_LEN) {
+	int found_end = 0;
+	while (header_length + 4 <= num_read) {
 		if (to_read[header_length] == '\r' &&
 		to_read[header_length + 1] == '\n' &&
 		to_read[header_length + 2] == '\r' &&
 		to_read[header_length + 3] == '\n') {
 			header_length += 4;
+			found_end = 1;
 			break;
 		}
 		header_length++;
 	}
 
-	if (header_length == num_read) {
+	if (!found_end) {
 		log_msg(LOG_ERR, "Could not find end of HTTP header.");
 		goto error;
 	}
