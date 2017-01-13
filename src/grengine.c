@@ -54,6 +54,7 @@ struct {
 	{".ico", "image/x-icon"},
 	{".webm", "video/webm"},
 	{".gif", "image/gif"},
+	{".json", "application/json"},
 	{".js", "text/javascript"},
 	{NULL, NULL}
 };
