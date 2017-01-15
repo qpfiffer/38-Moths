@@ -33,6 +33,7 @@
  * xXx resource[128]=The path for this request. (eg. '/articles/182') xXx
  * xXx matches=Any REGEX matches from your path are stored here. xXx
  * xXx full_header=The full header text of the request. xXx
+ * xXx body_len=The length of the POST body, or 0.
  * xXx full_body=The full body. xXx
  */
 typedef struct {
@@ -40,6 +41,7 @@ typedef struct {
 	char resource[128];
 	regmatch_t matches[MAX_MATCHES];
 	char *full_header;
+	size_t body_len;
 	unsigned char *full_body;
 } http_request;
 

@@ -268,6 +268,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	char *to_read = calloc(1, MAX_READ_LEN);
 	char *full_header = NULL;
 	unsigned char *full_body = NULL;
+	size_t body_len = 0;
 	char *actual_response = NULL;
 	http_response response = {
 		.mimetype = {0},
@@ -323,9 +324,11 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 
 		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
 		if (post_body_len < clength_num) {
-			full_body = (unsigned char *)strndup(to_read + header_length, num_read - header_length);
+			body_len = num_read - header_length;
+			full_body = (unsigned char *)strndup(to_read + header_length, body_len);
 		} else if (clength_num > 0 && clength_num < (size_t)num_read) {
-			full_body = (unsigned char *)strndup(to_read + header_length, clength_num);
+			body_len = clength_num;
+			full_body = (unsigned char *)strndup(to_read + header_length, body_len);
 		} else {
 			full_body = NULL;
 		}
@@ -336,6 +339,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		.resource = {0},
 		.matches = {{0}},
 		.full_header = full_header,
+		.body_len = body_len,
 		.full_body = full_body
 	};
 	rc = parse_request(to_read, &request);
