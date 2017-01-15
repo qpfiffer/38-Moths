@@ -309,21 +309,26 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 
 	full_header = strndup(to_read, header_length);
 
-	/* Parse the body into something useful. */
-	char *clength = get_header_value(full_header, header_length, "Content-Length");
-	size_t clength_num = 0;
-	if (clength == NULL) {
-		log_msg(LOG_WARN, "Could not parse content length.");
-	} else {
-		clength_num = atoi(clength);
-	}
+	/* Do we have a POST body or something? */
+	const size_t post_body_len = num_read - header_length;
+	if (post_body_len > 0) {
+		/* Parse the body into something useful. */
+		char *clength = get_header_value(full_header, header_length, "Content-Length");
+		size_t clength_num = 0;
+		if (clength == NULL) {
+			log_msg(LOG_WARN, "Could not parse content length.");
+		} else {
+			clength_num = atoi(clength);
+		}
 
-	if (num_read - header_length > 0) {
-		full_body = (unsigned char *)strndup(to_read + header_length, num_read - header_length);
-	} else if (clength_num > 0 && clength_num < (size_t)num_read) {
-		full_body = (unsigned char *)strndup(to_read + header_length, clength_num);
-	} else {
-		full_body = NULL;
+		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
+		if (post_body_len < clength_num) {
+			full_body = (unsigned char *)strndup(to_read + header_length, num_read - header_length);
+		} else if (clength_num > 0 && clength_num < (size_t)num_read) {
+			full_body = (unsigned char *)strndup(to_read + header_length, clength_num);
+		} else {
+			full_body = NULL;
+		}
 	}
 
 	http_request request = {
