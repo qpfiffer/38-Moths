@@ -22,15 +22,13 @@ static const char r_200[] =
 	"HTTP/1.1 200 OK\r\n"
 	"Content-Type: %s\r\n"
 	"Content-Length: %zu\r\n"
-	"Connection: close\r\n"
-	"Server: waifu.xyz/bitch\r\n\r\n";
+	"Connection: close\r\n";
 
 static const char r_404[] =
 	"HTTP/1.1 404 Not Found\r\n"
 	"Content-Type: %s\r\n"
 	"Content-Length: %zu\r\n"
-	"Connection: close\r\n"
-	"Server: waifu.xyz/bitch\r\n\r\n";
+	"Connection: close\r\n";
 
 static const char r_206[] =
 	"HTTP/1.1 206 Partial Content\r\n"
@@ -38,8 +36,9 @@ static const char r_206[] =
 	"Content-Length: %zu\r\n"
 	"Accept-Ranges: bytes\r\n"
 	"Content-Range: bytes %zu-%zu/%zu\r\n"
-	"Connection: close\r\n"
-	"Server: waifu.xyz/bitch\r\n\r\n";
+	"Connection: close\r\n";
+
+static const char r_final[] = "Server: waifu.xyz/bitch\r\n\r\n";
 
 /* internal struct, for mimetype guesses */
 struct {
@@ -419,13 +418,14 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	if (response_code == 200 || response_code == 404) {
 		const size_t integer_length = UINT_LEN(response.outsize);
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
-			+ integer_length - strlen("%s") - strlen("%zu");
+			+ integer_length - strlen("%s") - strlen("%zu") + strlen(r_final);
 		actual_response_siz = response.outsize + header_size;
 		actual_response = malloc(actual_response_siz + 1);
 		actual_response[actual_response_siz] = '\0';
 
 		/* snprintf the header because it's just a string: */
 		snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
+		strncat(actual_response, r_final, sizeof(r_final));
 
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out, response.outsize);
@@ -445,7 +445,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		const size_t minb_len = c_offset == 0 ? 1 : UINT_LEN(c_offset);
 		const size_t maxb_len = c_limit == 0 ? 1 : UINT_LEN(c_limit);
 		/* Compute the size of the header */
-		header_size = strlen(response.mimetype) + strlen(matched_response->message)
+		header_size = strlen(response.mimetype) + strlen(matched_response->message) + strlen(r_final)
 			+ integer_length + minb_len + maxb_len + integer_length
 			- strlen("%s") - (strlen("%zu") * 4);
 		actual_response_siz = full_size + header_size;
@@ -457,6 +457,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		snprintf(actual_response, actual_response_siz, matched_response->message,
 			response.mimetype, full_size,
 			c_offset, c_limit, full_size);
+		strncat(actual_response, r_final, sizeof(r_final));
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out + c_offset, full_size);
 	}
