@@ -48,16 +48,27 @@ typedef struct {
 /* xXx STRUCT=http_response xXx
 * xXx DESCRIPTION=Fill this out and return it, signed by your parents. Only <code>*out</code> and <code>outsize</code> are really necessary. xXx
 * xXx *out=A buffer of characters that will be written back to the requester. xXx
-* xXx outsize=The size of <code>out</code>.
+* xXx outsize=The size of <code>out</code>. xXx
 * xXx mimetype[32]=Optional, will be inferred from the http_request's file extension if left blank. xXx
 * xXx *extra_data=Optional, use this to pass things to the clean up function. For instance, mmap_file() uses <code>extra_data</code> to store the size of the file allocated. xXx
+* xXx *extra_headers=A vector containing extra headers. Use `insert_custom_header` to manage this parameter. xXx
 */
 typedef struct {
 	unsigned char *out;
 	size_t outsize;
 	char mimetype[32];
 	void *extra_data;
+	struct vector *extra_headers;
 } http_response;
+
+/* xXx STRUCT=header_pair xXx
+ * xXx *header=The actual header, eg. "Content-Length" xXx
+ * xXx *value=The value of the header, eg. "1762" xXx
+ */
+typedef struct {
+	const char *header;
+	const char *value;
+} header_pair;
 
 /* xXx STRUCT=route xXx
  * xXx DESCRIPTION=An array of these is how 38-Moths knows how to route requests. xXx
@@ -135,3 +146,11 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
  */
 handled_request *send_response(handled_request *hreq);
 
+/* xXx FUNCTION=insert_custom_header xXx
+ * xXx DESCRIPTION=Adds a custom header/value pair to an http_response object. Use this for redirects, cookies, etc. xXx
+ * xXx RETURNS=1 on sucess, 0 on failure. xXx
+ * xXx *response=The response to add the header to. xXx
+ * xXx *header=The NULL-terminated string representing the header to add, eg. "Location". Note that there is no ":". xXx
+ * xXx *value=The NULL-terminated string representing the header's value, eg. "/api/test". xXx
+ */
+int insert_custom_header(http_response *response, const char *header, const char *value);

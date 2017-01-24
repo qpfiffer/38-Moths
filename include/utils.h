@@ -8,12 +8,12 @@
 /* xXx DEFINE=INT_LEN(x) xXx
 * xXx DESCRIPTION=Returns the length of an integer if it were rendered as a string. xXx
 */
-#define INT_LEN(x) floor(log10(abs(x))) + 1
+#define INT_LEN(x) x == 0 ? 1 : floor(log10(abs(x))) + 1
 
 /* xXx DEFINE=UINT_LEN(x) xXx
 * xXx DESCRIPTION=Returns the length of an unsigned integer if it were rendered as a string. xXx
 */
-#define UINT_LEN(x) floor(log10(x)) + 1
+#define UINT_LEN(x) x == 0 ? 1 : floor(log10(x)) + 1
 
 /* xXx DEFINE=UNUSED(x) xXx
 * xXx DESCRIPTION=If an argument is unused, use this to avoid compiler warnings. Use with care. xXx

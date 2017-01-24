@@ -17,9 +17,22 @@
 #include "greshunkel.h"
 #include "utils.h"
 #include "logging.h"
+#include "vector.h"
 
 static const char r_200[] =
 	"HTTP/1.1 200 OK\r\n"
+	"Content-Type: %s\r\n"
+	"Content-Length: %zu\r\n"
+	"Connection: close\r\n";
+
+static const char r_301[] =
+	"HTTP/1.1 301 Moved\r\n"
+	"Content-Type: %s\r\n"
+	"Content-Length: %zu\r\n"
+	"Connection: close\r\n";
+
+static const char r_302[] =
+	"HTTP/1.1 302 Found\r\n"
 	"Content-Type: %s\r\n"
 	"Content-Length: %zu\r\n"
 	"Connection: close\r\n";
@@ -76,6 +89,8 @@ typedef struct {
 static const code_to_message response_headers[] = {
 	{200, r_200},
 	{206, r_206},
+	{301, r_301},
+	{302, r_302},
 	{404, r_404}
 };
 
@@ -215,6 +230,43 @@ void mmap_cleanup(const int status_code, http_response *response) {
 		munmap(response->out, response->outsize);
 		free(response->extra_data);
 	}
+}
+
+int insert_custom_header(http_response *response, const char *header, const char *value) {
+	if (!header || !value || !response)
+		return 0;
+
+	if (!response->extra_headers) {
+		vector *new_vector = vector_new(sizeof(header_pair *), 4);
+		if (new_vector == NULL) {
+			log_msg(LOG_ERR, "Could not create vector for http_response extra headers!");
+			return 0;
+		}
+		response->extra_headers = new_vector;
+	}
+
+	header_pair *new_pair = calloc(1, sizeof(header_pair));
+	if (!new_pair) {
+		log_msg(LOG_ERR, "Could not create header_pair for http_response extra headers!");
+		return 0;
+	}
+
+	const char *copied_header = strdup(header);
+	const char *copied_value = strdup(value);
+	if (!copied_header || !copied_value) {
+		log_msg(LOG_ERR, "Could not create copied values for http_response extra headers!");
+		free(new_pair);
+		return 0;
+	}
+
+	header_pair _stack_pair = {
+		.header = copied_header,
+		.value = copied_value
+	};
+	memcpy(new_pair, &_stack_pair, sizeof(header_pair));
+	vector_append_ptr(response->extra_headers, new_pair);
+
+	return 0;
 }
 
 static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
@@ -385,9 +437,6 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 
 	if (response_code == 404 && (response.outsize == 0 || response.out == NULL)) {
 		response_code = r_404_handler(&request, &response);
-	} else {
-		assert(response.outsize > 0);
-		assert(response.out != NULL);
 	}
 
 	/* Embed the handler's text into the header: */
@@ -415,8 +464,10 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	 * compile time. */
 	assert(matched_response != NULL);
 
-	if (response_code == 200 || response_code == 404) {
+	if (response_code == 200 || response_code == 404 || response_code == 301 || response_code == 302) {
 		const size_t integer_length = UINT_LEN(response.outsize);
+		if (response.mimetype[0] == '\0')
+			strncpy(response.mimetype, "text/html", strlen("text/html"));
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
 			+ integer_length - strlen("%s") - strlen("%zu") + strlen(r_final);
 		actual_response_siz = response.outsize + header_size;
@@ -425,7 +476,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 
 		/* snprintf the header because it's just a string: */
 		snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
-		strncat(actual_response, r_final, sizeof(r_final));
+		strncat(actual_response, r_final, response.outsize);
 
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out, response.outsize);
@@ -457,7 +508,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		snprintf(actual_response, actual_response_siz, matched_response->message,
 			response.mimetype, full_size,
 			c_offset, c_limit, full_size);
-		strncat(actual_response, r_final, sizeof(r_final));
+		strncat(actual_response, r_final, full_size);
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out + c_offset, full_size);
 	}
@@ -479,7 +530,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	return hreq;
 
 error:
-	if (matching_route != NULL)
+	if (matching_route != NULL && matching_route->cleanup != NULL)
 		matching_route->cleanup(500, &response);
 	free(actual_response);
 	free(to_read);
@@ -505,7 +556,8 @@ handled_request *send_response(handled_request *hreq) {
 	if (hreq->response_len - hreq->sent <= 0) {
 		if (matching_route->cleanup != NULL) {
 			log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
-			matching_route->cleanup(hreq->response_code, &hreq->response);
+			if (matching_route->cleanup)
+				matching_route->cleanup(hreq->response_code, &hreq->response);
 		}
 		close(hreq->accept_fd);
 		free(hreq->response_bytes);
@@ -517,7 +569,7 @@ handled_request *send_response(handled_request *hreq) {
 	return hreq;
 
 error:
-	if (matching_route != NULL)
+	if (matching_route != NULL && matching_route->cleanup != NULL)
 		matching_route->cleanup(500, &hreq->response);
 	close(hreq->accept_fd);
 	free(hreq->response_bytes);
