@@ -236,15 +236,6 @@ int insert_custom_header(http_response *response, const char *header, const char
 	if (!header || !value || !response)
 		return 0;
 
-	if (!response->extra_headers) {
-		vector *new_vector = vector_new(sizeof(header_pair *), 4);
-		if (new_vector == NULL) {
-			log_msg(LOG_ERR, "Could not create vector for http_response extra headers!");
-			return 0;
-		}
-		response->extra_headers = new_vector;
-	}
-
 	header_pair *new_pair = calloc(1, sizeof(header_pair));
 	if (!new_pair) {
 		log_msg(LOG_ERR, "Could not create header_pair for http_response extra headers!");
@@ -325,12 +316,13 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		.mimetype = {0},
 		0
 	};
+	response.extra_headers = vector_new(sizeof(header_pair *), 4);
+
 	handled_request *hreq = NULL;
 	const route *matching_route = NULL;
 	size_t num_read = 0;
 	int rc = 0;
 
-	//num_read = recv(accept_fd, to_read, MAX_READ_LEN, 0);
 	size_t read_this_time = 0;
 	while ((read_this_time = recv(accept_fd, to_read, MAX_READ_LEN, 0))) {
 		num_read += read_this_time;
@@ -470,15 +462,14 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 			strncpy(response.mimetype, "text/html", strlen("text/html"));
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
 			+ integer_length - strlen("%s") - strlen("%zu") + strlen(r_final);
-		actual_response_siz = response.outsize + header_size;
 
 		size_t i = 0;
 		for (i = 0; i < response.extra_headers->count; i++) {
 			header_pair **pair = (header_pair **)vector_get(response.extra_headers, i);
-			actual_response_siz += strlen((*pair)->header) + strlen(": ") + strlen((*pair)->value)
+			header_size += strlen((*pair)->header) + strlen(": ") + strlen((*pair)->value)
 								    + strlen("\r\n");
 		}
-
+		actual_response_siz = response.outsize + header_size;
 		actual_response = malloc(actual_response_siz + 1);
 		actual_response[actual_response_siz] = '\0';
 
@@ -500,6 +491,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	} else if (response_code == 206) {
 		/* Byte range queries have some extra shit. */
 		range_header byte_range = parse_range_header(range_header_value);
+		/* TODO: Add the custom header stuff here (for 206), too. */
 
 		log_msg(LOG_INFO, "Range header parsed: Raw: %s Limit: %zu Offset: %zu", range_header_value, byte_range.limit, byte_range.offset);
 		free(range_header_value);
