@@ -539,6 +539,17 @@ error:
 	return NULL;
 }
 
+static void _clean_up_extra_headers(http_response *response) {
+	size_t i = 0;
+	for (i = 0; i < response->extra_headers->count; i++) {
+		header_pair **pair = (header_pair **)vector_get(response->extra_headers, i);
+		free((char *)(*pair)->header);
+		free((char *)(*pair)->value);
+		free(*pair);
+	}
+	vector_free(response->extra_headers);
+}
+
 handled_request *send_response(handled_request *hreq) {
 	/* Send that shit over the wire: */
 	const route *matching_route = hreq->matching_route;
@@ -559,6 +570,7 @@ handled_request *send_response(handled_request *hreq) {
 			if (matching_route->cleanup)
 				matching_route->cleanup(hreq->response_code, &hreq->response);
 		}
+		_clean_up_extra_headers(&hreq->response);
 		close(hreq->accept_fd);
 		free(hreq->response_bytes);
 		free(hreq);
@@ -571,6 +583,7 @@ handled_request *send_response(handled_request *hreq) {
 error:
 	if (matching_route != NULL && matching_route->cleanup != NULL)
 		matching_route->cleanup(500, &hreq->response);
+	_clean_up_extra_headers(&hreq->response);
 	close(hreq->accept_fd);
 	free(hreq->response_bytes);
 	free(hreq);
