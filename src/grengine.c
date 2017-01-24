@@ -471,11 +471,28 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
 			+ integer_length - strlen("%s") - strlen("%zu") + strlen(r_final);
 		actual_response_siz = response.outsize + header_size;
+
+		size_t i = 0;
+		for (i = 0; i < response.extra_headers->count; i++) {
+			header_pair **pair = (header_pair **)vector_get(response.extra_headers, i);
+			actual_response_siz += strlen((*pair)->header) + strlen(": ") + strlen((*pair)->value)
+								    + strlen("\r\n");
+		}
+
 		actual_response = malloc(actual_response_siz + 1);
 		actual_response[actual_response_siz] = '\0';
 
 		/* snprintf the header because it's just a string: */
 		snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
+		for (i = 0; i < response.extra_headers->count; i++) {
+			header_pair **pair = (header_pair **)vector_get(response.extra_headers, i);
+			const size_t siz = strlen((*pair)->header) + strlen(": ") + strlen((*pair)->value)
+								    + strlen("\r\n");
+			char buf[siz];
+			memset(buf, '\0', sizeof(buf));
+			snprintf(buf, actual_response_siz, "%s: %s\r\n", (*pair)->header, (*pair)->value);
+			strncat(actual_response, buf, actual_response_siz);
+		}
 		strncat(actual_response, r_final, response.outsize);
 
 		/* memcpy the rest because it could be anything: */
