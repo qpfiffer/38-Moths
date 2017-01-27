@@ -63,11 +63,15 @@ typedef struct {
 
 /* xXx STRUCT=header_pair xXx
  * xXx *header=The actual header, eg. "Content-Length" xXx
+ * xXx header_len=Length of the header, in bytes. xXx
  * xXx *value=The value of the header, eg. "1762" xXx
+ * xXx value_len=Length of the value, in bytes. xXx
  */
 typedef struct {
 	const char *header;
+	const size_t header_len;
 	const char *value;
+	const size_t value_len;
 } header_pair;
 
 /* xXx STRUCT=route xXx
@@ -153,4 +157,4 @@ handled_request *send_response(handled_request *hreq);
  * xXx *header=The NULL-terminated string representing the header to add, eg. "Location". Note that there is no ":". xXx
  * xXx *value=The NULL-terminated string representing the header's value, eg. "/api/test". xXx
  */
-int insert_custom_header(http_response *response, const char *header, const char *value);
+int insert_custom_header(http_response *response, const char *header, const size_t header_len, const char *value, const size_t value_len);

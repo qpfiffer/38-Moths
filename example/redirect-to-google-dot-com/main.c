@@ -6,7 +6,7 @@
 int main_sock_fd;
 
 static int index_handler(const http_request *request, http_response *response) {
-	insert_custom_header(response, "Location", "http://google.com/");
+	insert_custom_header(response, "Location", strlen("Location"), "http://google.com/", strlen("http://google.com/"));
 	return 302;
 }
 

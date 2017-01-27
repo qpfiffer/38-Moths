@@ -232,7 +232,7 @@ void mmap_cleanup(const int status_code, http_response *response) {
 	}
 }
 
-int insert_custom_header(http_response *response, const char *header, const char *value) {
+int insert_custom_header(http_response *response, const char *header, const size_t header_len, const char *value, const size_t value_len) {
 	if (!header || !value || !response)
 		return 0;
 
@@ -242,8 +242,8 @@ int insert_custom_header(http_response *response, const char *header, const char
 		return 0;
 	}
 
-	const char *copied_header = strdup(header);
-	const char *copied_value = strdup(value);
+	const char *copied_header = strndup(header, header_len);
+	const char *copied_value = strndup(value, value_len);
 	if (!copied_header || !copied_value) {
 		log_msg(LOG_ERR, "Could not create copied values for http_response extra headers!");
 		free(new_pair);
@@ -252,7 +252,9 @@ int insert_custom_header(http_response *response, const char *header, const char
 
 	header_pair _stack_pair = {
 		.header = copied_header,
-		.value = copied_value
+		.header_len = header_len,
+		.value = copied_value,
+		.value_len = value_len,
 	};
 	memcpy(new_pair, &_stack_pair, sizeof(header_pair));
 	vector_append_ptr(response->extra_headers, new_pair);
@@ -466,7 +468,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		size_t i = 0;
 		for (i = 0; i < response.extra_headers->count; i++) {
 			header_pair **pair = (header_pair **)vector_get(response.extra_headers, i);
-			header_size += strlen((*pair)->header) + strlen(": ") + strlen((*pair)->value)
+			header_size += (*pair)->header_len + strlen(": ") + (*pair)->value_len
 								    + strlen("\r\n");
 		}
 		actual_response_siz = response.outsize + header_size;
@@ -477,14 +479,14 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
 		for (i = 0; i < response.extra_headers->count; i++) {
 			header_pair **pair = (header_pair **)vector_get(response.extra_headers, i);
-			const size_t siz = strlen((*pair)->header) + strlen(": ") + strlen((*pair)->value)
-								    + strlen("\r\n");
+			const size_t siz = (*pair)->header_len + strlen(": ") + (*pair)->value_len
+								    + strlen("\r\n") + 1;
 			char buf[siz];
-			memset(buf, '\0', sizeof(buf));
+			buf[siz] = '\0';
 			snprintf(buf, actual_response_siz, "%s: %s\r\n", (*pair)->header, (*pair)->value);
-			strncat(actual_response, buf, actual_response_siz);
+			strncat(actual_response, buf, siz);
 		}
-		strncat(actual_response, r_final, response.outsize);
+		strncat(actual_response, r_final, strlen(r_final));
 
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out, response.outsize);
