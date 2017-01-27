@@ -519,7 +519,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		snprintf(actual_response, actual_response_siz, matched_response->message,
 			response.mimetype, full_size,
 			c_offset, c_limit, full_size);
-		strncat(actual_response, r_final, full_size);
+		strncat(actual_response, r_final, strlen(r_final));
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out + c_offset, full_size);
 	}
