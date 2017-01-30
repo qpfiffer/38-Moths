@@ -29,12 +29,30 @@ const char document[] =
 "			<p>XxX return_hello f XxX</p>\n"
 "			<p>xXx @subs.name xXx - xXx @subs.other xXx</p>\n"
 "		xXx BBL xXx\n"
-"		xXx IF this_should_work xXx\n"
+
+"		xXx UNLESS dne xXx\n"
 "		<p>You should see this.</p>\n"
-"		xXx ENDIF xXx\n"
-"		xXx IF this_should_not_work xXx\n"
+"		xXx ENDLESS xXx\n"
+
+"		xXx UNLESS NOT dne xXx\n"
 "		<p>You should not see this.</p>\n"
-"		xXx ENDIF xXx\n"
+"		xXx ENDLESS xXx\n"
+
+"		xXx UNLESS this_should_work_falsey xXx\n"
+"		<p>You should see this.</p>\n"
+"		xXx ENDLESS xXx\n"
+
+"		xXx UNLESS NOT this_should_work_falsey xXx\n"
+"		<p>You should not see this.</p>\n"
+"		xXx ENDLESS xXx\n"
+
+"		xXx UNLESS this_should_work_truthy xXx\n"
+"		<p>You should not see this.</p>\n"
+"		xXx ENDLESS xXx\n"
+
+"		xXx UNLESS NOT this_should_work_truthy xXx\n"
+"		<p>You should see this.</p>\n"
+"		xXx ENDLESS xXx\n"
 "	</body>\n"
 "</html>\n";
 
@@ -57,6 +75,9 @@ void test1() {
 
 	gshkl_add_string(ctext, "TEST", "This is a test.");
 	gshkl_add_int(ctext, "FAKEINT", 666);
+
+	gshkl_add_string(ctext, "this_should_work_truthy", "TRUE");
+	gshkl_add_string(ctext, "this_should_work_falsey", "FALSE");
 
 	gshkl_add_string(ctext, "TRICKY", "TrIcKy");
 	gshkl_add_int(ctext, "ONE", 1);

@@ -40,8 +40,8 @@ static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]
 static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
 static const char include_regex[] = "^\\s+xXx SCREAM ([a-zA-Z_]+) xXx";
-static const char conditional_regex[] = "^\\s+xXx IF ([a-zA-Z_]+) xXx";
-static const char conditional_inverse_regex[] = "^\\s+xXx IF NOT ([a-zA-Z_]+) xXx";
+static const char conditional_regex[] = "^\\s+xXx UNLESS ([a-zA-Z_]+) xXx(.*)xXx ENDLESS xXx";
+static const char conditional_inverse_regex[] = "^\\s+xXx UNLESS NOT ([a-zA-Z_]+) xXx(.*)xXx ENDLESS xXx";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(struct greshunkel_ctext));
@@ -567,7 +567,110 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 
 	return to_return;
 }
+
+static line
+_interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t *num_read, const struct compiled_regex *all_regex) {
+	line to_return = {0};
+	*num_read = 0;
+
+	match_t match[4] = {{0}};
+	if (regexec_2_0_beta(&all_regex->c_conditional_inverse_regex, buf, 3, match) == 0) {
+		const match_t conditional_variable = match[1];
+		match_t conditional_meat = match[2];
+		/* Make sure they were matched: */
+		assert(conditional_variable.rm_so != -1 && conditional_variable.rm_eo != -1);
+		assert(conditional_meat.rm_so != -1 && conditional_meat.rm_eo != -1);
+
+		size_t possible_dif = 0;
+		const char *closest_endif = NULL;
+		closest_endif = strstr(conditional_meat.start, "xXx ENDLESS xXx");
+		possible_dif = closest_endif - buf;
+		if (possible_dif != (unsigned int)conditional_meat.rm_so) {
+			conditional_meat.rm_eo = possible_dif;
+			conditional_meat.len = conditional_meat.rm_eo - conditional_meat.rm_so;
+		}
+
+		/* We found a conditioanl. */
+		*num_read = conditional_meat.rm_eo + strlen("xXx ENDLESS xXx");
+
+		char just_match_str[conditional_variable.len + 1];
+		just_match_str[conditional_variable.len] = '\0';
+		strncpy(just_match_str, conditional_variable.start, conditional_variable.len);
+
+		/* TODO: Support a boolean type. */
+		/*if (!((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_BOOL)) { */
+		int should_render = 0;
+		if (!find_needle(ctext, just_match_str, 1)) {
+			should_render = 1;
+		} else if (1 /* TODO: Test for falsiness */) {
+			should_render = 1;
+		}
+
+		if (should_render) {
+			line to_render_line;
+			to_render_line.data = strndup(conditional_meat.start, conditional_meat.len);
+			to_render_line.size = conditional_meat.len;
+
+			line rendered_piece = _interpolate_line(ctext, to_render_line, all_regex);
+
+			const size_t old_size = to_return.size;
+			to_return.size += rendered_piece.size;
+			to_return.data = realloc(to_return.data, to_return.size);
+			strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
+			free(rendered_piece.data);
+		}
+	} else if (regexec_2_0_beta(&all_regex->c_conditional_inverse_regex, buf, 3, match) == 0) {
+		const match_t conditional_variable = match[1];
+		match_t conditional_meat = match[2];
+
+		assert(conditional_variable.rm_so != -1 && conditional_variable.rm_eo != -1);
+		assert(conditional_meat.rm_so != -1 && conditional_meat.rm_eo != -1);
+
+		size_t possible_dif = 0;
+		const char *closest_endif = NULL;
+		closest_endif = strstr(conditional_meat.start, "xXx ENDLESS xXx");
+		possible_dif = closest_endif - buf;
+		if (possible_dif != (unsigned int)conditional_meat.rm_so) {
+			conditional_meat.rm_eo = possible_dif;
+			conditional_meat.len = conditional_meat.rm_eo - conditional_meat.rm_so;
+		}
+
+		/* We found a conditioanl. */
+		*num_read = conditional_meat.rm_eo + strlen("xXx ENDLESS xXx");
+
+		char just_match_str[conditional_variable.len + 1];
+		just_match_str[conditional_variable.len] = '\0';
+		strncpy(just_match_str, conditional_variable.start, conditional_variable.len);
+
+		/* TODO: Support a boolean type. */
+		/*if (!((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_BOOL)) { */
+		int should_render = 0;
+		if (find_needle(ctext, just_match_str, 1)) {
+			should_render = 1;
+		} else if (1 /*TODO: See if the value is falsey. */) {
+			should_render = 1;
+		}
+
+		if (should_render) {
+			line to_render_line;
+			to_render_line.data = strndup(conditional_meat.start, conditional_meat.len);
+			to_render_line.size = conditional_meat.len;
+
+			line rendered_piece = _interpolate_line(ctext, to_render_line, all_regex);
+
+			const size_t old_size = to_return.size;
+			to_return.size += rendered_piece.size;
+			to_return.data = realloc(to_return.data, to_return.size);
+			strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
+			free(rendered_piece.data);
+		}
+	}
+
+	return to_return;
+}
+
 static inline void _compile_regex(struct compiled_regex *all_regex) {
+	/* TODO: Clean this up with Orbitz Gum. */
 	int reti = regcomp(&all_regex->c_var_regex, variable_regex, REG_EXTENDED);
 	assert(reti == 0);
 
@@ -596,6 +699,8 @@ static inline void _destroy_regex(struct compiled_regex *all_regex) {
 	regfree(&all_regex->c_loop_regex);
 	regfree(&all_regex->c_filter_regex);
 	regfree(&all_regex->c_include_regex);
+	regfree(&all_regex->c_conditional_regex);
+	regfree(&all_regex->c_conditional_inverse_regex);
 }
 
 char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const size_t original_size, size_t *outsize) {
@@ -623,8 +728,16 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 
 		/* Otherwise just interpolate the line like normal. */
 		if (loop_readahead == 0) {
-			to_append = _interpolate_line(ctext, current_line, &all_regex);
-			num_read += current_line.size;
+			/* Now let's try to interpolate an if statement, much like a loop. */
+			size_t conditional_readahead = 0;
+			to_append = _interpolate_conditionals(ctext, to_render + num_read, &conditional_readahead, &all_regex);
+
+			if (conditional_readahead == 0) {
+				to_append = _interpolate_line(ctext, current_line, &all_regex);
+				num_read += current_line.size;
+			} else {
+				num_read += conditional_readahead;
+			}
 		} else {
 			num_read += loop_readahead;
 		}
