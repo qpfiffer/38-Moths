@@ -30,27 +30,27 @@ const char document[] =
 "			<p>xXx @subs.name xXx - xXx @subs.other xXx</p>\n"
 "		xXx BBL xXx\n"
 
-"		xXx UNLESS dne xXx\n"
+"		xXx UNLESS @dne xXx\n"
 "		<p>You should see this. 1/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS NOT dne xXx\n"
+"		xXx UNLESS NOT @dne xXx\n"
 "		<p>You should not see this. 1/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS falsey xXx\n"
+"		xXx UNLESS @falsey xXx\n"
 "		<p>You should see this. 2/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS NOT falsey xXx\n"
+"		xXx UNLESS NOT @falsey xXx\n"
 "		<p>You should not see this. 2/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS truthy xXx\n"
+"		xXx UNLESS @truthy xXx\n"
 "		<p>You should not see this. 3/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS NOT truthy xXx\n"
+"		xXx UNLESS NOT @truthy xXx\n"
 "		<p>You should see this. 3/3</p>\n"
 "		xXx ENDLESS xXx\n"
 "	</body>\n"

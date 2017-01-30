@@ -40,8 +40,8 @@ static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]
 static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
 static const char include_regex[] = "^\\s+xXx SCREAM ([a-zA-Z_]+) xXx";
-static const char conditional_regex[] = "^\\s+xXx UNLESS ([a-zA-Z_]+) xXx(.*)xXx ENDLESS xXx";
-static const char conditional_inverse_regex[] = "^\\s+xXx UNLESS NOT ([a-zA-Z_]+) xXx(.*)xXx ENDLESS xXx";
+static const char conditional_regex[] = "^\\s+xXx UNLESS @([a-zA-Z_]+) xXx(.*)xXx ENDLESS xXx";
+static const char conditional_inverse_regex[] = "^\\s+xXx UNLESS NOT @([a-zA-Z_]+) xXx(.*)xXx ENDLESS xXx";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(struct greshunkel_ctext));
