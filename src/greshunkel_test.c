@@ -31,27 +31,27 @@ const char document[] =
 "		xXx BBL xXx\n"
 
 "		xXx UNLESS dne xXx\n"
-"		<p>You should see this.</p>\n"
+"		<p>You should see this. 1/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
 "		xXx UNLESS NOT dne xXx\n"
-"		<p>You should not see this.</p>\n"
+"		<p>You should not see this. 1/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS this_should_work_falsey xXx\n"
-"		<p>You should see this.</p>\n"
+"		xXx UNLESS falsey xXx\n"
+"		<p>You should see this. 2/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS NOT this_should_work_falsey xXx\n"
-"		<p>You should not see this.</p>\n"
+"		xXx UNLESS NOT falsey xXx\n"
+"		<p>You should not see this. 2/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS this_should_work_truthy xXx\n"
-"		<p>You should not see this.</p>\n"
+"		xXx UNLESS truthy xXx\n"
+"		<p>You should not see this. 3/3</p>\n"
 "		xXx ENDLESS xXx\n"
 
-"		xXx UNLESS NOT this_should_work_truthy xXx\n"
-"		<p>You should see this.</p>\n"
+"		xXx UNLESS NOT truthy xXx\n"
+"		<p>You should see this.3/3</p>\n"
 "		xXx ENDLESS xXx\n"
 "	</body>\n"
 "</html>\n";
@@ -76,8 +76,8 @@ void test1() {
 	gshkl_add_string(ctext, "TEST", "This is a test.");
 	gshkl_add_int(ctext, "FAKEINT", 666);
 
-	gshkl_add_string(ctext, "this_should_work_truthy", "TRUE");
-	gshkl_add_string(ctext, "this_should_work_falsey", "FALSE");
+	gshkl_add_string(ctext, "truthy", "TRUE");
+	gshkl_add_string(ctext, "falsey", "FALSE");
 
 	gshkl_add_string(ctext, "TRICKY", "TrIcKy");
 	gshkl_add_int(ctext, "ONE", 1);

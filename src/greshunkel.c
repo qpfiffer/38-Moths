@@ -599,11 +599,15 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 
 		/* TODO: Support a boolean type. */
 		/*if (!((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_BOOL)) { */
+		const greshunkel_tuple *tuple = NULL;
 		int should_render = 0;
-		if (!find_needle(ctext, just_match_str, 1)) {
+		if ((tuple = find_needle(ctext, just_match_str, 1))) {
 			should_render = 1;
-		} else if (1 /* TODO: Test for falsiness */) {
-			should_render = 1;
+		} else {
+			if (tuple != NULL && tuple->type == GSHKL_STR &&
+					(tuple->value.str != NULL && strncmp(tuple->value.str, "TRUE", strlen("TRUE")) == 0)) {
+				should_render = 1;
+			}
 		}
 
 		if (should_render) {
@@ -644,11 +648,13 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 
 		/* TODO: Support a boolean type. */
 		/*if (!((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_BOOL)) { */
+		const greshunkel_tuple *tuple = NULL;
 		int should_render = 0;
-		if (find_needle(ctext, just_match_str, 1)) {
-			should_render = 1;
-		} else if (1 /*TODO: See if the value is falsey. */) {
-			should_render = 1;
+		if ((tuple = find_needle(ctext, just_match_str, 1))) {
+			if (tuple->type == GSHKL_STR &&
+					(tuple->value.str == NULL || strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0)) {
+				should_render = 1;
+			}
 		}
 
 		if (should_render) {
