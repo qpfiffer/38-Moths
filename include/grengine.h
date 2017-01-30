@@ -62,6 +62,7 @@ typedef struct {
 } http_response;
 
 /* xXx STRUCT=header_pair xXx
+ * xXx DESCRIPTION=Object used to hold extra header information in an http_request object. xXx
  * xXx *header=The actual header, eg. "Content-Length" xXx
  * xXx header_len=Length of the header, in bytes. xXx
  * xXx *value=The value of the header, eg. "1762" xXx
