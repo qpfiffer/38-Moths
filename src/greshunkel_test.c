@@ -51,7 +51,7 @@ const char document[] =
 "		xXx ENDLESS xXx\n"
 
 "		xXx UNLESS NOT truthy xXx\n"
-"		<p>You should see this.3/3</p>\n"
+"		<p>You should see this. 3/3</p>\n"
 "		xXx ENDLESS xXx\n"
 "	</body>\n"
 "</html>\n";
