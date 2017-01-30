@@ -570,6 +570,22 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 	return to_return;
 }
 
+static inline int _is_falsey(const greshunkel_tuple *tuple) {
+	const int is_string = tuple->type == GSHKL_STR ? 1 : 0;
+	const int is_null = tuple->value.arr == NULL || strnlen(tuple->value.str, MAX_GSHKL_STR_SIZE) == 0 ? 1 : 0;
+	if (!is_null) {
+		const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
+		return is_string && says_false;
+	}
+	return 0;
+}
+
+static inline int _is_truthy(const greshunkel_tuple *tuple) {
+	const int is_string = tuple->type == GSHKL_STR ? 1 : 0;
+	const int is_null = tuple->value.arr == NULL || strnlen(tuple->value.str, MAX_GSHKL_STR_SIZE) == 0 ? 1 : 0;
+	return is_string && !is_null;
+}
+
 static line
 _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t *num_read, const struct compiled_regex *all_regex) {
 	line to_return = {0};
@@ -605,16 +621,15 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 		char *sub_ctext_match = NULL;
 		int should_render = 0;
 		if ((tuple = find_needle(ctext, just_match_str, 1))) {
-			if (tuple->type == GSHKL_STR &&
-					(tuple->value.str == NULL || strncmp(tuple->value.str, "FALSE", strlen("FALSE")) != 0)) {
+			if (_is_truthy(tuple)) {
 				should_render = 1;
 			}
 		} else if ((sub_ctext_match = strchr(just_match_str, '.')) != NULL) {
 			/* TODO: Check sub-context. */
 			char sub_context_name[MAX_GSHKL_STR_SIZE] = {0};
 			char sub_item_name[MAX_GSHKL_STR_SIZE] = {0};
-			strncpy(sub_context_name, just_match_str, sub_ctext_match - just_match_str);
-			strncpy(sub_item_name, sub_ctext_match + sizeof('.'), sizeof(sub_item_name));
+			memcpy(sub_context_name, just_match_str, sub_ctext_match - just_match_str);
+			memcpy(sub_item_name, sub_ctext_match + strlen("."), conditional_variable.len - strlen(sub_context_name) + strlen("."));
 
 			if ((tuple = find_needle(ctext, sub_context_name, 1)) && tuple->type == GSHKL_SUBCTEXT) {
 				const greshunkel_ctext *sub_ctext = tuple->value.sub_ctext;
@@ -626,13 +641,8 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 					const size_t larger = strlen(_name) > strlen(sub_item_name) ?
 							strlen(_name) : strlen(sub_item_name);
 
-					if (strncmp(_name, sub_item_name, larger) == 0) {
-						/* TODO: Only works on strings. */
-						assert(sub_tuple->type == GSHKL_STR);
-						if (tuple->type == GSHKL_STR &&
-								(tuple->value.str == NULL || strncmp(tuple->value.str, "FALSE", strlen("FALSE")) != 0)) {
+					if (strncmp(_name, sub_item_name, larger) == 0 && _is_truthy(sub_tuple)) {
 							should_render = 1;
-						}
 					}
 				}
 			}
@@ -683,15 +693,14 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 		if (!(tuple = find_needle(ctext, just_match_str, 1))) {
 			should_render = 1;
 		} else {
-			if (tuple != NULL && tuple->type == GSHKL_STR &&
-					(tuple->value.str != NULL && strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0)) {
+			if (_is_falsey(tuple)) {
 				should_render = 1;
 			} else if ((sub_ctext_match = strchr(just_match_str, '.')) != NULL) {
 				/* TODO: Check sub-context. */
 				char sub_context_name[MAX_GSHKL_STR_SIZE] = {0};
 				char sub_item_name[MAX_GSHKL_STR_SIZE] = {0};
-				strncpy(sub_context_name, just_match_str, sub_ctext_match - just_match_str);
-				strncpy(sub_item_name, sub_ctext_match + sizeof('.'), sizeof(sub_item_name));
+				memcpy(sub_context_name, just_match_str, sub_ctext_match - just_match_str);
+				memcpy(sub_item_name, sub_ctext_match + strlen("."), conditional_variable.len - strlen(sub_context_name) + strlen("."));
 
 				if ((tuple = find_needle(ctext, sub_context_name, 1)) && tuple->type == GSHKL_SUBCTEXT) {
 					const greshunkel_ctext *sub_ctext = tuple->value.sub_ctext;
@@ -703,13 +712,9 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 						const size_t larger = strlen(_name) > strlen(sub_item_name) ?
 								strlen(_name) : strlen(sub_item_name);
 
-						if (strncmp(_name, sub_item_name, larger) == 0) {
-							/* TODO: Only works on strings. */
-							assert(sub_tuple->type == GSHKL_STR);
-							if (sub_tuple != NULL && sub_tuple->type == GSHKL_STR &&
-									(sub_tuple->value.str != NULL && strncmp(sub_tuple->value.str, "FALSE", strlen("FALSE")) == 0)) {
+						if (strncmp(_name, sub_item_name, larger) == 0 &&
+							_is_truthy(sub_tuple)) {
 								should_render = 1;
-							}
 						}
 					}
 				}
