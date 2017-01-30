@@ -29,6 +29,12 @@ const char document[] =
 "			<p>XxX return_hello f XxX</p>\n"
 "			<p>xXx @subs.name xXx - xXx @subs.other xXx</p>\n"
 "		xXx BBL xXx\n"
+"		xXx IF this_should_work xXx\n"
+"		<p>You should see this.</p>\n"
+"		xXx ENDIF xXx\n"
+"		xXx IF this_should_not_work xXx\n"
+"		<p>You should not see this.</p>\n"
+"		xXx ENDIF xXx\n"
 "	</body>\n"
 "</html>\n";
 
