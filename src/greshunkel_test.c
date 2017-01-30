@@ -23,6 +23,13 @@ const char document[] =
 "		</ul>\n"
 "		<p>Context Interpolation:</p>\n"
 "		<p>xXx @sub.name xXx - xXx @sub.other xXx</p>\n"
+"		xXx UNLESS @sub.name xXx\n"
+"		<p>You should not see this. Ctext interp.</p>\n"
+"		xXx ENDLESS xXx\n"
+
+"		xXx UNLESS NOT @sub.name xXx\n"
+"		<p>You should see this. ctext interp.</p>\n"
+"		xXx ENDLESS xXx\n"
 "		<p>XxX return_hello doesnt_matter_at_all XxX</p>\n"
 "		xXx LOOP subs SUB_LOOP_TEST xXx\n"
 "			<p>FILTERS IN FILTERS IN LOOPS: XxX return_z F XxX</p>\n"
