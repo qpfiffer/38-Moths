@@ -121,7 +121,8 @@ int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], 
 
 	/* Copy the value of the string into the var object: */
 	greshunkel_var _stack_var = {{0}};
-	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
+	if (value != NULL)
+		strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
 	_stack_var.str[MAX_GSHKL_STR_SIZE] = '\0';
 
 	/* Copy the var object itself into the tuple's var space: */
@@ -207,7 +208,8 @@ int gshkl_add_string_to_loop(greshunkel_var *loop, const char *value) {
 	};
 
 	greshunkel_var _stack_var = {{0}};
-	strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
+	if (value != NULL)
+		strncpy(_stack_var.str, value, MAX_GSHKL_STR_SIZE);
 	_stack_var.str[MAX_GSHKL_STR_SIZE] = '\0';
 
 	memcpy(&_stack_tuple.value, &_stack_var, sizeof(union greshunkel_var));
@@ -603,7 +605,7 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 		int should_render = 0;
 		if ((tuple = find_needle(ctext, just_match_str, 1))) {
 			if (tuple->type == GSHKL_STR &&
-					(tuple->value.str == NULL || strncmp(tuple->value.str, "TRUE", strlen("TRUE")) == 0)) {
+					(tuple->value.str == NULL || strncmp(tuple->value.str, "FALSE", strlen("FALSE")) != 0)) {
 				should_render = 1;
 			}
 		}
