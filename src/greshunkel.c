@@ -266,11 +266,11 @@ static void vishnu(line *new_line_to_add, const match_t match, const char *resul
 	new_line_to_add->size = sizes[0] + sizes[1] + sizes[2];
 	new_line_to_add->data = p = calloc(1, new_line_to_add->size + 1);
 
-	strncpy(p, operating_line->data, sizes[0]);
+	memcpy(p, operating_line->data, sizes[0]);
 	p += sizes[0];
-	strncpy(p, result, sizes[1]);
+	memcpy(p, result, sizes[1]);
 	p += sizes[1];
-	strncpy(p, operating_line->data + match.rm_eo, sizes[2]);
+	memcpy(p, operating_line->data + match.rm_eo, sizes[2]);
 }
 
 static int regexec_2_0_beta(const regex_t *preg, const char *string, size_t nmatch, match_t pmatch[]) {
@@ -542,13 +542,13 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 				/* Recurse contexts until my fucking mind melts. */
 				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
 				gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
-				rendered_piece = _interpolate_line(_temp_ctext, to_render_line, all_regex);
+				rendered_piece.data = gshkl_render(_temp_ctext, to_render_line.data, to_render_line.size, &rendered_piece.size);
 				gshkl_free_context(_temp_ctext);
 			} else if (current_loop_var->type == GSHKL_SUBCTEXT) {
 				/* Recurse contexts until my fucking mind melts. */
 				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
 				gshkl_add_sub_context(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.sub_ctext);
-				rendered_piece = _interpolate_line(_temp_ctext, to_render_line, all_regex);
+				rendered_piece.data = gshkl_render(_temp_ctext, to_render_line.data, to_render_line.size, &rendered_piece.size);
 				gshkl_free_context(_temp_ctext);
 			} else {
 				printf("Weird type given during loop interpolation.");
@@ -559,7 +559,7 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;
 			to_return.data = realloc(to_return.data, to_return.size);
-			strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
+			memcpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
 			free(rendered_piece.data);
 		}
 
@@ -648,7 +648,7 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;
 			to_return.data = realloc(to_return.data, to_return.size);
-			strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
+			memcpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
 			free(rendered_piece.data);
 		}
 	} else if (regexec_2_0_beta(&all_regex->c_conditional_regex, buf, 3, match) == 0) {
@@ -725,7 +725,7 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;
 			to_return.data = realloc(to_return.data, to_return.size);
-			strncpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
+			memcpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
 			free(rendered_piece.data);
 		}
 	}
@@ -815,7 +815,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 				goto error;
 			rendered = med_buf;
 		}
-		strncpy(rendered + old_outsize, to_append.data, to_append.size);
+		memcpy(rendered + old_outsize, to_append.data, to_append.size);
 		if (to_append.data != current_line.data)
 			free(current_line.data);
 		free(to_append.data);
@@ -824,7 +824,7 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 	/* rendered[intermediate_outsize - 1] = '\0'; */
 
 	if (outsize)
-		*outsize = intermediate_outsize;
+		*outsize = intermediate_outsize - 1;
 	return rendered;
 
 error:

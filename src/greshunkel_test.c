@@ -35,6 +35,12 @@ const char document[] =
 "			<p>FILTERS IN FILTERS IN LOOPS: XxX return_z F XxX</p>\n"
 "			<p>XxX return_hello f XxX</p>\n"
 "			<p>xXx @subs.name xXx - xXx @subs.other xXx</p>\n"
+"		xXx UNLESS NOT @sub.name xXx\n"
+"		<p>You should not see this. Ctext interp.</p>\n"
+"		xXx ENDLESS xXx\n"
+"		xXx UNLESS @sub.name xXx\n"
+"		<p>You should see this. ctext interp.</p>\n"
+"		xXx ENDLESS xXx\n"
 "		xXx BBL xXx\n"
 
 "		xXx UNLESS @dne xXx\n"
