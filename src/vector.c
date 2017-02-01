@@ -66,8 +66,28 @@ inline const void *vector_get(const vector *vec, const unsigned int i) {
 }
 
 int vector_reverse(vector *vec) {
-	(void)vec;
-	return 0;
+	const size_t item_size = vec->item_size;
+	unsigned int i = 0;
+
+	unsigned char *buf = malloc(item_size);
+	if (!buf)
+		return 0;
+
+	for (;i < (unsigned int)(vec->count / 2); i++) {
+		const void *item = vector_get(vec, i);
+		const unsigned int offset = vec->count - i - 1;
+		if (!memcpy(buf, vector_get(vec, offset), item_size))
+			return 0;
+
+		if (!memcpy(nth(offset), item, item_size))
+			return 0;
+
+		if (!memcpy(nth(i), buf, item_size))
+			return 0;
+	}
+	free(buf);
+
+	return 1;
 }
 
 void vector_free(vector *vec) {

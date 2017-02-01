@@ -73,13 +73,13 @@ int test_vector_reverse() {
 	vector *vec = vector_new(sizeof(uint64_t), 2);
 
 	uint64_t i;
-	for (i = 0; i < 10000; i++)
+	for (i = 0; i < 99999; i++)
 		vector_append(vec, &i, sizeof(i));
 
 	if (!vector_reverse(vec))
 		return 1;
 
-	for (; i >= vec->count; i--) {
+	for (i -= 1; i >= vec->count; i--) {
 		uint64_t *j = (uint64_t *)vector_get(vec, i);
 		if (i != *j)
 			return 1;
