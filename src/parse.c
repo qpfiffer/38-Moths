@@ -9,6 +9,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
+#include "grengine.h"
 #include "parse.h"
 #include "logging.h"
 
@@ -133,4 +134,75 @@ char *get_header_value(const char *request, const size_t request_siz, const char
 	strncpy(data, header_value_start, header_value_size);
 
 	return data;
+}
+
+int parse_request(const char to_read[MAX_READ_LEN], const size_t num_read, http_request *out) {
+	/* Find the verb */
+	const char *verb_end = strnstr(to_read, " ", MAX_READ_LEN);
+	if (verb_end == NULL)
+		goto error;
+
+	const size_t c_verb_size = verb_end - to_read;
+	const size_t verb_size = c_verb_size >= sizeof(out->verb) ? sizeof(out->verb) - 1: c_verb_size;
+	strncpy(out->verb, to_read, verb_size);
+
+	const char *res_offset = verb_end + strlen(" ");
+	const char *resource_end = strnstr(res_offset, " ", sizeof(out->resource));
+	if (resource_end == NULL)
+		goto error;
+
+	const size_t c_resource_size = resource_end - res_offset;
+	const size_t resource_size = c_resource_size >= sizeof(out->resource) ? sizeof(out->resource) : c_resource_size;
+	strncpy(out->resource, res_offset, resource_size);
+
+	/* Parse full header here. */
+	size_t header_length = 0;
+	int found_end = 0;
+	while (header_length + 3 <= num_read) {
+		if (to_read[header_length] == '\r' &&
+		to_read[header_length + 1] == '\n' &&
+		to_read[header_length + 2] == '\r' &&
+		to_read[header_length + 3] == '\n') {
+			header_length += 4;
+			found_end = 1;
+			break;
+		}
+		header_length++;
+	}
+
+	if (!found_end) {
+		log_msg(LOG_ERR, "Could not find end of HTTP header.");
+		goto error;
+	}
+
+	out->full_header = strndup(to_read, header_length);
+
+	/* Do we have a POST body or something? */
+	const size_t post_body_len = num_read - header_length;
+	if (post_body_len > 0) {
+		/* Parse the body into something useful. */
+		char *clength = get_header_value(out->full_header, header_length, "Content-Length");
+		size_t clength_num = 0;
+		if (clength == NULL) {
+			log_msg(LOG_WARN, "Could not parse content length.");
+		} else {
+			clength_num = atoi(clength);
+		}
+
+		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
+		if (post_body_len < clength_num) {
+			out->body_len = num_read - header_length;
+			out->full_body = (unsigned char *)strndup(to_read + header_length, out->body_len);
+		} else if (clength_num > 0 && clength_num < (size_t)num_read) {
+			out->body_len = clength_num;
+			out->full_body = (unsigned char *)strndup(to_read + header_length, out->body_len);
+		} else {
+			out->full_body = NULL;
+		}
+	}
+
+	return 0;
+
+error:
+	return -1;
 }

@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "parse.h"
 #include "grengine.h"
 #include "greshunkel.h"
 #include "utils.h"
@@ -262,31 +263,6 @@ int insert_custom_header(http_response *response, const char *header, const size
 	return 0;
 }
 
-static int parse_request(const char to_read[MAX_READ_LEN], http_request *out) {
-	/* Find the verb */
-	const char *verb_end = strnstr(to_read, " ", MAX_READ_LEN);
-	if (verb_end == NULL)
-		goto error;
-
-	const size_t c_verb_size = verb_end - to_read;
-	const size_t verb_size = c_verb_size >= sizeof(out->verb) ? sizeof(out->verb) - 1: c_verb_size;
-	strncpy(out->verb, to_read, verb_size);
-
-	const char *res_offset = verb_end + strlen(" ");
-	const char *resource_end = strnstr(res_offset, " ", sizeof(out->resource));
-	if (resource_end == NULL)
-		goto error;
-
-	const size_t c_resource_size = resource_end - res_offset;
-	const size_t resource_size = c_resource_size >= sizeof(out->resource) ? sizeof(out->resource) : c_resource_size;
-	strncpy(out->resource, res_offset, resource_size);
-
-	return 0;
-
-error:
-	return -1;
-}
-
 static void log_request(const http_request *request, const http_response *response, const int response_code) {
 	char *visitor_ip_addr = get_header_value(request->full_header, strlen(request->full_header), "X-Real-IP");
 	char *user_agent = get_header_value(request->full_header, strlen(request->full_header), "User-Agent");
@@ -309,10 +285,8 @@ static void log_request(const http_request *request, const http_response *respon
 }
 
 handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
+	/* TODO: Malloc here */
 	char *to_read = calloc(1, MAX_READ_LEN);
-	char *full_header = NULL;
-	unsigned char *full_body = NULL;
-	size_t body_len = 0;
 	char *actual_response = NULL;
 	http_response response = {
 		.mimetype = {0},
@@ -326,68 +300,23 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	int rc = 0;
 
 	size_t read_this_time = 0;
-	while ((read_this_time = recv(accept_fd, to_read, MAX_READ_LEN, 0))) {
+	while ((read_this_time = recv(accept_fd, to_read + num_read, MAX_READ_LEN, 0))) {
 		num_read += read_this_time;
 		if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
 			break;
 		read_this_time = 0;
-	}
-
-	/* Parse full header here. */
-	size_t header_length = 0;
-	int found_end = 0;
-	while (header_length + 3 <= num_read) {
-		if (to_read[header_length] == '\r' &&
-		to_read[header_length + 1] == '\n' &&
-		to_read[header_length + 2] == '\r' &&
-		to_read[header_length + 3] == '\n') {
-			header_length += 4;
-			found_end = 1;
-			break;
-		}
-		header_length++;
-	}
-
-	if (!found_end) {
-		log_msg(LOG_ERR, "Could not find end of HTTP header.");
-		goto error;
-	}
-
-	full_header = strndup(to_read, header_length);
-
-	/* Do we have a POST body or something? */
-	const size_t post_body_len = num_read - header_length;
-	if (post_body_len > 0) {
-		/* Parse the body into something useful. */
-		char *clength = get_header_value(full_header, header_length, "Content-Length");
-		size_t clength_num = 0;
-		if (clength == NULL) {
-			log_msg(LOG_WARN, "Could not parse content length.");
-		} else {
-			clength_num = atoi(clength);
-		}
-
-		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
-		if (post_body_len < clength_num) {
-			body_len = num_read - header_length;
-			full_body = (unsigned char *)strndup(to_read + header_length, body_len);
-		} else if (clength_num > 0 && clength_num < (size_t)num_read) {
-			body_len = clength_num;
-			full_body = (unsigned char *)strndup(to_read + header_length, body_len);
-		} else {
-			full_body = NULL;
-		}
+		/* XXX: Realloc here! This is a bug! */
 	}
 
 	http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
-		.full_header = full_header,
-		.body_len = body_len,
-		.full_body = full_body
+		.full_header = NULL,
+		.body_len = 0,
+		.full_body = NULL
 	};
-	rc = parse_request(to_read, &request);
+	rc = parse_request(to_read, num_read, &request);
 	if (rc != 0) {
 		log_msg(LOG_ERR, "Could not parse request.");
 		goto error;
@@ -536,8 +465,8 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	memcpy(&hreq->response, &response, sizeof(response));
 
 	free(to_read);
-	free(full_header);
-	free(full_body);
+	free(request.full_header);
+	free(request.full_body);
 	return hreq;
 
 error:
@@ -545,8 +474,8 @@ error:
 		matching_route->cleanup(500, &response);
 	free(actual_response);
 	free(to_read);
-	free(full_header);
-	free(full_body);
+	free(request.full_header);
+	free(request.full_body);
 	return NULL;
 }
 

@@ -2,12 +2,6 @@
 #pragma once
 #include <regex.h>
 #include "greshunkel.h"
-#include "parse.h"
-
-/* xXx DEFINE=MAX_READ_LEN xXx
-* xXx DESCRIPTION=The maximum amount of bytes to be read when receiving a request. xXx
-*/
-#define MAX_READ_LEN 1024
 
 /* xXx DEFINE=VERB_SIZE xXx
 * xXx DESCRIPTION=The maximum size of an HTTP verb. xXx
@@ -159,3 +153,9 @@ handled_request *send_response(handled_request *hreq);
  * xXx *value=The NULL-terminated string representing the header's value, eg. "/api/test". xXx
  */
 int insert_custom_header(http_response *response, const char *header, const size_t header_len, const char *value, const size_t value_len);
+
+/* xXx FUNCTION=parse_request xXx
+ * xXx DESCRIPTION=Internal function used to get values from a raw HTTP request. xXx
+ * xXx RETURNS=0 on sucess, -1 on failure. xXx
+ */
+int parse_request(const char *, const size_t, http_request *);

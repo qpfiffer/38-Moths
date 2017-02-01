@@ -1,10 +1,14 @@
 // vim: noet ts=4 sw=4
+#ifdef __clang__
+	#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#endif
 #include <assert.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
 #define DEBUG
+#include "grengine.h"
 #include "logging.h"
 #include "utils.h"
 #include "vector.h"
@@ -88,6 +92,85 @@ int test_vector_reverse() {
 	return 0;
 }
 
+int test_request_without_body_is_parseable() {
+	const char req[] = " GET / HTTP/1.1\r\n"
+		"User-Agent: curl/7.35.0\r\n"
+		"Host: localhost:8080\r\n"
+		"Content-Length: 6\r\n"
+		"Accept: */*\r\n\r\n"
+		"Hello!";
+	http_request request = {
+		.verb = {0},
+		.resource = {0},
+		.matches = {{0}},
+		.full_header = NULL,
+		.body_len = 0,
+		.full_body = NULL
+	};
+	int rc = parse_request(req, strlen(req), &request);
+	if (rc != 0)
+		return 1;
+	if (strnlen(request.full_header, strlen(req)) != strlen(req) - 6)
+		return 1;
+	if (request.full_body == NULL || request.body_len != 6)
+		return 1;
+	if (strlen((char *)request.full_body) != 6)
+		return 1;
+	return 0;
+}
+
+int test_request_with_body_is_parseable() {
+	const char req[] = " GET / HTTP/1.1\r\n"
+		"User-Agent: curl/7.35.0\r\n"
+		"Host: localhost:8080\r\n"
+		"Accept: */*\r\n\r\n";
+	http_request request = {
+		.verb = {0},
+		.resource = {0},
+		.matches = {{0}},
+		.full_header = NULL,
+		.body_len = 0,
+		.full_body = NULL
+	};
+	int rc = parse_request(req, strlen(req), &request);
+	if (rc != 0)
+		return 1;
+	if (strnlen(request.full_header, strlen(req)) != strlen(req))
+		return 1;
+	if (request.full_body != NULL || request.body_len > 0)
+		return 1;
+	return 0;
+}
+
+int test_request_body_is_extracted() {
+	const char req[] = " GET / HTTP/1.1\r\n"
+		"User-Agent: curl/7.35.0\r\n"
+		"Host: localhost:8080\r\n"
+		"Content-Length: 6\r\n"
+		"Accept: */*\r\n\r\n"
+		"Hello!";
+	http_request request = {
+		.verb = {0},
+		.resource = {0},
+		.matches = {{0}},
+		.full_header = NULL,
+		.body_len = 0,
+		.full_body = NULL
+	};
+	int rc = parse_request(req, strlen(req), &request);
+	if (rc != 0)
+		return 1;
+	if (request.full_header == NULL || request.full_body == NULL)
+		return 1;
+	if (strnlen(request.full_header, strlen(req)) != strlen(req) - 6)
+		return 1;
+	if (request.full_body == NULL || request.body_len <= 0)
+		return 1;
+	if (strcmp((char *)request.full_body, "Hello!") != 0)
+		return 1;
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	UNUSED(argc);
 	UNUSED(argv);
@@ -97,9 +180,15 @@ int main(int argc, char *argv[]) {
 	int tests_run = 0;
 	int tests_failed = 0;
 
+	/* Vector tests */
 	run_test(test_vector);
 	run_test(test_vector_ptr_append);
 	run_test(test_vector_reverse);
+
+	/* Parsing tests */
+	run_test(test_request_without_body_is_parseable);
+	run_test(test_request_with_body_is_parseable);
+	run_test(test_request_body_is_extracted);
 
 	log_msg(LOG_INFO, "Tests passed: (%i/%i).\n", tests_run, tests_run + tests_failed);
 

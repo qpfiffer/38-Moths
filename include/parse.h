@@ -1,6 +1,11 @@
 // vim: noet ts=4 sw=4
 #pragma once
 
+/* xXx DEFINE=MAX_READ_LEN xXx
+* xXx DESCRIPTION=The maximum amount of bytes to be read when receiving a request. xXx
+*/
+#define MAX_READ_LEN 1024
+
 /* Used for answering range queries on static files. */
 typedef struct range_header {
 	const size_t limit;

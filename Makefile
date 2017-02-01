@@ -21,8 +21,8 @@ test: greshunkel_test unit_test
 greshunkel_test: greshunkel_test.o greshunkel.o vector.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o greshunkel_test $^
 
-unit_test: $(COMMON_OBJ) utests.o greshunkel.o vector.o
-	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o unit_test $^
+unit_test: $(COMMON_OBJ) grengine.o utests.o greshunkel.o vector.o parse.o
+	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o unit_test $^ -lm -lrt
 
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c -fPIC $<
