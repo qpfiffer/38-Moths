@@ -336,7 +336,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	/* Parse full header here. */
 	size_t header_length = 0;
 	int found_end = 0;
-	while (header_length + 4 <= num_read) {
+	while (header_length + 3 <= num_read) {
 		if (to_read[header_length] == '\r' &&
 		to_read[header_length + 1] == '\n' &&
 		to_read[header_length + 2] == '\r' &&
