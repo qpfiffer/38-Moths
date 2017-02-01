@@ -38,7 +38,7 @@
  */
 typedef struct {
 	char verb[VERB_SIZE];
-	char resource[128];
+	char resource[512];
 	regmatch_t matches[MAX_MATCHES];
 	char *full_header;
 	size_t body_len;
