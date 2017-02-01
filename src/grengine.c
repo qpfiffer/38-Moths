@@ -300,7 +300,8 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	int rc = 0;
 
 	size_t read_this_time = 0;
-	while ((read_this_time = recv(accept_fd, to_read + num_read, MAX_READ_LEN, 0))) {
+	/* while ((read_this_time = recv(accept_fd, to_read + num_read, MAX_READ_LEN, 0))) { */
+	while ((read_this_time = recv(accept_fd, to_read, MAX_READ_LEN, 0))) {
 		num_read += read_this_time;
 		if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
 			break;
