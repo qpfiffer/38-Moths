@@ -49,6 +49,13 @@ int vector_append_ptr(vector *vec, const void *pointer);
  */
 const void *vector_get(const vector *vec, const unsigned int i);
 
+/* xXx FUNCTION=vector_reverse xXx
+ * xXx DESCRIPTION=Reverses the vector, from beginning to end. xXx
+ * xXx RETURNS=1 on success. xXx
+ * xXx *vec=The vector to be reversed. xXx
+ */
+int vector_reverse(vector *vec);
+
 /* xXx FUNCTION=vector_free xXx
  * xXx DESCRIPTION=Cleans up and removes a vector's allocated memory. xXx
  * xXx RETURNS=Nothing. xXx

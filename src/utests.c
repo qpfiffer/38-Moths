@@ -69,6 +69,25 @@ int test_vector_ptr_append() {
 	return 0;
 }
 
+int test_vector_reverse() {
+	vector *vec = vector_new(sizeof(uint64_t), 2);
+
+	uint64_t i;
+	for (i = 0; i < 10000; i++)
+		vector_append(vec, &i, sizeof(i));
+
+	if (!vector_reverse(vec))
+		return 1;
+
+	for (; i >= vec->count; i--) {
+		uint64_t *j = (uint64_t *)vector_get(vec, i);
+		if (i != *j)
+			return 1;
+	}
+
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	UNUSED(argc);
 	UNUSED(argv);
@@ -80,8 +99,11 @@ int main(int argc, char *argv[]) {
 
 	run_test(test_vector);
 	run_test(test_vector_ptr_append);
+	run_test(test_vector_reverse);
 
 	log_msg(LOG_INFO, "Tests passed: (%i/%i).\n", tests_run, tests_run + tests_failed);
 
+	if (tests_run != tests_run + tests_failed)
+		return 1;
 	return 0;
 }

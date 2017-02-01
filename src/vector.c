@@ -65,6 +65,11 @@ inline const void *vector_get(const vector *vec, const unsigned int i) {
 	return nth(i);
 }
 
+int vector_reverse(vector *vec) {
+	(void)vec;
+	return 0;
+}
+
 void vector_free(vector *vec) {
 	free(vec->items);
 	free(vec);
