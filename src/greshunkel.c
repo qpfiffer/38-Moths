@@ -641,7 +641,7 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 					const size_t larger = strlen(_name) > strlen(sub_item_name) ?
 							strlen(_name) : strlen(sub_item_name);
 
-					if (strncmp(_name, sub_item_name, larger) == 0 && _is_truthy(sub_tuple)) {
+					if (strncmp(_name, sub_item_name, larger) == 0 && _is_falsey(sub_tuple)) {
 							should_render = 1;
 					}
 				}
@@ -691,7 +691,32 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 		char *sub_ctext_match = NULL;
 		int should_render = 0;
 		if (!(tuple = find_needle(ctext, just_match_str, 1))) {
-			should_render = 1;
+			if ((sub_ctext_match = strchr(just_match_str, '.')) != NULL) {
+				/* TODO: Check sub-context. */
+				char sub_context_name[MAX_GSHKL_STR_SIZE] = {0};
+				char sub_item_name[MAX_GSHKL_STR_SIZE] = {0};
+				memcpy(sub_context_name, just_match_str, sub_ctext_match - just_match_str);
+				memcpy(sub_item_name, sub_ctext_match + strlen("."), conditional_variable.len - strlen(sub_context_name) + strlen("."));
+
+				if ((tuple = find_needle(ctext, sub_context_name, 1)) && tuple->type == GSHKL_SUBCTEXT) {
+					const greshunkel_ctext *sub_ctext = tuple->value.sub_ctext;
+
+					unsigned int i;
+					for (i = 0; i < sub_ctext->values->count; i++) {
+						const greshunkel_tuple *sub_tuple = vector_get(sub_ctext->values, i);
+						const char *_name = sub_tuple->name;
+						const size_t larger = strlen(_name) > strlen(sub_item_name) ?
+								strlen(_name) : strlen(sub_item_name);
+
+						if (strncmp(_name, sub_item_name, larger) == 0 &&
+							_is_truthy(sub_tuple)) {
+								should_render = 1;
+						}
+					}
+				}
+			} else {
+				should_render = 1;
+			}
 		} else {
 			if (_is_falsey(tuple)) {
 				should_render = 1;
