@@ -428,30 +428,31 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		log_msg(LOG_INFO, "Range header parsed: Raw: %s Limit: %zu Offset: %zu", range_header_value, byte_range.limit, byte_range.offset);
 		free(range_header_value);
 
-		const size_t c_offset = byte_range.offset;
-		const size_t c_limit = byte_range.limit == 0 ?
-			(response.outsize - c_offset) - 1 : (byte_range.limit - c_offset) - 1;
-		const size_t full_size = c_limit + 1;
-		const size_t integer_length = UINT_LEN(full_size);
+		const size_t start_byte = byte_range.offset < response.outsize ? byte_range.offset : 0;
+		const size_t end_byte = byte_range.limit == 0 ?
+			response.outsize - 1: (response.outsize - byte_range.limit) - 1;
+		const size_t max_size = response.outsize; /* Should be the same as file size. */
+		const size_t integer_length = UINT_LEN(max_size);
 
-		const size_t minb_len = c_offset == 0 ? 1 : UINT_LEN(c_offset);
-		const size_t maxb_len = c_limit == 0 ? 1 : UINT_LEN(c_limit);
+		const size_t minb_len = start_byte == 0 ? 1 : UINT_LEN(start_byte);
+		const size_t maxb_len = end_byte == 0 ? 1 : UINT_LEN(end_byte);
 		/* Compute the size of the header */
 		header_size = strlen(response.mimetype) + strlen(matched_response->message) + strlen(r_final)
 			+ integer_length + minb_len + maxb_len + integer_length
 			- strlen("%s") - (strlen("%zu") * 4);
-		actual_response_siz = full_size + header_size;
+		actual_response_siz = max_size + header_size;
 		/* malloc the full response */
 		actual_response = malloc(actual_response_siz + 1);
 		actual_response[actual_response_siz] = '\0';
 
 		/* snprintf the header because it's just a string: */
 		snprintf(actual_response, actual_response_siz, matched_response->message,
-			response.mimetype, full_size,
-			c_offset, c_limit, full_size);
+			response.mimetype, max_size,
+			start_byte, end_byte, max_size);
+		log_msg(LOG_INFO, "Sending back: Content-Range: %zu-%zu/%zu", start_byte, end_byte, max_size);
 		strncat(actual_response, r_final, strlen(r_final));
 		/* memcpy the rest because it could be anything: */
-		memcpy(actual_response + header_size, response.out + c_offset, full_size);
+		memcpy(actual_response + header_size, response.out + start_byte, end_byte - start_byte);
 	}
 
 	log_request(&request, &response, response_code);
