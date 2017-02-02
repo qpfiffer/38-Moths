@@ -423,6 +423,11 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 					goto done;
 				}
 			}
+
+			/* Blow up if we had a variable that wasn't in the context. */
+			printf("Did not match a sub-context variable that needed to be matched.\n");
+			printf("Line: %s\n", operating_line->data);
+			assert(1 == 0);
 		} else {
 			/* Blow up if we had a variable that wasn't in the context. */
 			printf("Did not match a cvariable that needed to be matched.\n");
