@@ -20,6 +20,9 @@ vector *vector_new(const size_t item_size, const size_t initial_element_count) {
 }
 
 inline int vector_append(vector *vec, const void *item, const size_t item_size) {
+	if (vec == NULL)
+		return 0;
+
 	if (item_size > vec->item_size)
 		return 0;
 
@@ -43,6 +46,9 @@ inline int vector_append(vector *vec, const void *item, const size_t item_size) 
 }
 
 inline int vector_append_ptr(vector *vec, const void *pointer) {
+	if (vec == NULL)
+		return 0;
+
 	if (vec->item_size != sizeof(pointer))
 		return 0;
 
@@ -60,12 +66,17 @@ inline int vector_append_ptr(vector *vec, const void *pointer) {
 }
 
 inline const void *vector_get(const vector *vec, const unsigned int i) {
+	if (vec == NULL)
+		return NULL;
 	if (i > vec->max_size)
 		return NULL;
 	return nth(i);
 }
 
 int vector_reverse(vector *vec) {
+	if (vec == NULL)
+		return 0;
+
 	const size_t item_size = vec->item_size;
 	unsigned int i = 0;
 
@@ -91,6 +102,8 @@ int vector_reverse(vector *vec) {
 }
 
 void vector_free(vector *vec) {
+	if (vec == NULL)
+		return;
 	free(vec->items);
 	free(vec);
 }
