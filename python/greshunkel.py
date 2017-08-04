@@ -27,8 +27,8 @@ def _add_item_to_greshunkel_loop(ctext, loop, value):
     elif isinstance(value, int):
         lib38moths.gshkl_add_int_to_loop(byref(loop), value)
     elif hasattr(value, '__call__'):
-        lib38moths.gshkl_add_filter(ctext, c_char_p(key.encode()), value, None)
-    elif isinstance(value, list):
+        raise Exception("Don't really know what you're trying to do here.")
+    elif isinstance(value, list) or isinstance(value, tuple):
         raise Exception("Cannot add loops to loops right now. Use subcontexts.")
     elif isinstance(value, dict):
         sub_ctext = lib38moths.gshkl_init_context()
