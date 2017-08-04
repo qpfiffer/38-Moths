@@ -9,3 +9,4 @@ unit_test
 .vagrant
 *.so
 python/__pycache__/
+amalgamated

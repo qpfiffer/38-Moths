@@ -1,5 +1,5 @@
 VERSION=0.1
-CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O3 -ffunction-sections -fdata-sections -g
+CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O0 -ffunction-sections -fdata-sections -g
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
 COMMON_OBJ=utils.o vector.o logging.o
@@ -40,6 +40,17 @@ install: all
 	@install ./include/*.h $(INSTALL_INCLUDE)
 	@ldconfig $(INSTALL_LIB)
 	@echo "38-moths installed to $(PREFIX) :^)."
+
+amalgamated:
+	mkdir $@
+
+vendor: all
+	@cat include/utils.h include/vector.h include/greshunkel.h include/38-moths.h include/grengine.h include/logging.h include/parse.h include/server.h > amalgamated/38-moths.h
+	@sed -i 's/\#include ".*"$$//g' ./amalgamated/38-moths.h
+	@cat  src/vector.c src/utils.c src/grengine.c src/greshunkel.c src/logging.c src/parse.c src/server.c > ./amalgamated/38-moths.c
+	@sed -i 's/\#include ".*"$$/#include "38-moths.h"/g' ./amalgamated/38-moths.c
+	@cp Makefile.vendor ./amalgamated/Makefile
+	@echo "38-moths amalgamated into ./amalgamated :^)."
 
 uninstall:
 	rm -rf $(INSTALL_LIB)$(NAME).$(VERSION)
