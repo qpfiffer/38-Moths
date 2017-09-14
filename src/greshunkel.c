@@ -425,7 +425,7 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 			}
 
 			/* Blow up if we had a variable that wasn't in the context. */
-			printf("Did not match a sub-context variable that needed to be matched.\n");
+			printf("Did not match a sub-context variable that needed to be matched, or variable was None/NULL/0).\n");
 			printf("Line: %s\n", operating_line->data);
 			assert(1 == 0);
 		} else {
@@ -847,9 +847,10 @@ char *gshkl_render(const greshunkel_ctext *ctext, const char *to_render, const s
 		const size_t old_outsize = intermediate_outsize;
 		intermediate_outsize += to_append.size;
 		{
-			char *med_buf = realloc(rendered, intermediate_outsize);
+			char *med_buf = realloc(rendered, intermediate_outsize + 1);
 			if (med_buf == NULL)
 				goto error;
+			med_buf[intermediate_outsize] = '\0';
 			rendered = med_buf;
 		}
 		memcpy(rendered + old_outsize, to_append.data, to_append.size);

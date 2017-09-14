@@ -10,10 +10,10 @@ vector *vector_new(const size_t item_size, const size_t initial_element_count) {
 		.item_size = item_size,
 		.max_size = initial_element_count,
 		.count = 0,
-		.items = malloc(initial_element_count * item_size + 1)
+		.items = calloc(1, initial_element_count * item_size + 1)
 	};
 
-	vector *to_return = malloc(sizeof(vector));
+	vector *to_return = calloc(1, sizeof(vector));
 	memcpy(to_return, &_vec, sizeof(vector));
 
 	return to_return;
