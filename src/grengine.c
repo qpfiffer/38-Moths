@@ -306,9 +306,13 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
 			break;
 		read_this_time = 0;
+
 		to_read = realloc(to_read, num_read + MAX_READ_LEN);
+		if (!to_read) {
+			log_msg(LOG_ERR, "Ran out of memory reading request.");
+			goto error;
+		}
 		memset(to_read + num_read, '\0', MAX_READ_LEN);
-		/* XXX: Realloc here! This is a bug! */
 	}
 
 	http_request request = {
