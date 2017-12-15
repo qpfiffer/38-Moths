@@ -13,10 +13,11 @@ void log_msg(log_level level, const char *fmsg, ...) {
 	va_list ap;
 	FILE *fd;
 
-	const char inf[] = "[%c[%dm-%c[%dm]"; /* Blue [-] */
+	const char inf[] = "[%c[%dm-%c[%dm]"; /* Blue   [-] */
+	const char dbg[] = "[%c[%dm^%c[%dm]"; /* Orange [^] */
 	const char wrn[] = "[%c[%dm!%c[%dm]"; /* Yellow [!] */
-	const char err[] = "[%c[%dmx%c[%dm]"; /* Red [x] */
-	const char fun[] = "[%c[%dm~%c[%dm]"; /* Teal [~] */
+	const char err[] = "[%c[%dmx%c[%dm]"; /* Red    [x] */
+	const char fun[] = "[%c[%dm~%c[%dm]"; /* Teal   [~] */
 	const char dbc[] = "[%c[%dm~%c[%dm]"; /* Purple [&] */
 	char sym_buf[15] = {0};
 
@@ -36,6 +37,9 @@ void log_msg(log_level level, const char *fmsg, ...) {
 	switch (level) {
 		case LOG_INFO:
 			snprintf(sym_buf, strlen(inf), inf, 0x1B, 34, 0x1B, 0);
+			break;
+		case LOG_DEBUG:
+			snprintf(sym_buf, strlen(dbg), dbg, 0x1B, 91, 0x1B, 0);
 			break;
 		case LOG_WARN:
 			snprintf(sym_buf, strlen(wrn), wrn, 0x1B, 33, 0x1B, 0);

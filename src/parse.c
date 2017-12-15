@@ -139,9 +139,9 @@ int parse_request(const char to_read[MAX_READ_LEN], const size_t num_read, http_
 	int found_end = 0;
 	while (header_length + 3 <= num_read) {
 		if (to_read[header_length] == '\r' &&
-		to_read[header_length + 1] == '\n' &&
-		to_read[header_length + 2] == '\r' &&
-		to_read[header_length + 3] == '\n') {
+		    to_read[header_length + 1] == '\n' &&
+		    to_read[header_length + 2] == '\r' &&
+		    to_read[header_length + 3] == '\n') {
 			header_length += 4;
 			found_end = 1;
 			break;
@@ -150,7 +150,7 @@ int parse_request(const char to_read[MAX_READ_LEN], const size_t num_read, http_
 	}
 
 	if (!found_end) {
-		log_msg(LOG_ERR, "Could not find end of HTTP header.");
+		log_msg(LOG_DEBUG, "Could not find end of HTTP header.");
 		goto error;
 	}
 
@@ -170,12 +170,15 @@ int parse_request(const char to_read[MAX_READ_LEN], const size_t num_read, http_
 
 		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
 		if (post_body_len < clength_num) {
+			log_msg(LOG_DEBUG, "FULL BODY: Post body length less than clength for full_body.");
 			out->body_len = num_read - header_length;
 			out->full_body = (unsigned char *)strndup(to_read + header_length, out->body_len);
 		} else if (clength_num > 0 && clength_num < (size_t)num_read) {
+			log_msg(LOG_DEBUG, "FULL BODY: clength is less than num_read for full_body.");
 			out->body_len = clength_num;
 			out->full_body = (unsigned char *)strndup(to_read + header_length, out->body_len);
 		} else {
+			log_msg(LOG_DEBUG, "FULL BODY: full_body is going to be null.");
 			out->full_body = NULL;
 		}
 	}
