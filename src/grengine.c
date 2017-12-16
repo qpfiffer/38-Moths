@@ -284,6 +284,32 @@ static void log_request(const http_request *request, const http_response *respon
 		free(user_agent);
 }
 
+static void reread_from_socket(const int, accept_fd, const size_t clength_num, size_t num_read, http_request *out) {
+	char *to_read = calloc(1, MAX_READ_LEN);
+
+	/* Do we have a POST body or something? */
+	const size_t post_body_len = num_read - out->header_len;
+	if (post_body_len <= 0 && clength_num > 0) {
+		log_msg(LOG_WARN, "Content-Length is %i but we got a post_body_len of %i.", clength_num, post_body_len);
+		log_msg(LOG_WARN, "Attempting to re-read from stream.", clength_num, post_body_len);
+		/* XXX: Do a select here with a timeout. */
+		size_t read_this_time = 0;
+		while ((read_this_time = recv(accept_fd, to_read + new_num_read, MAX_READ_LEN, 0))) {
+			new_num_read += read_this_time;
+			if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
+				break;
+			read_this_time = 0;
+
+			to_read = realloc(to_read, new_num_read + MAX_READ_LEN);
+			if (!to_read) {
+				log_msg(LOG_ERR, "Ran out of memory reading request.");
+				goto error;
+			}
+			memset(to_read + new_num_read, '\0', MAX_READ_LEN);
+		}
+	}
+}
+
 handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
 	/* TODO: Malloc here */
 	char *to_read = calloc(1, MAX_READ_LEN);
@@ -328,6 +354,21 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	if (rc != 0) {
 		log_msg(LOG_ERR, "Could not parse request.");
 		goto error;
+	}
+
+	char *clength = get_header_value(out->full_header, out->header_len, "Content-Length");
+	size_t clength_num = 0;
+	if (clength == NULL) {
+		log_msg(LOG_WARN, "Could not parse content length.");
+	} else {
+		clength_num = atoi(clength);
+		free(clength);
+	}
+
+	/* Do we have a POST body or something? */
+	const size_t post_body_len = num_read - out->header_len;
+	if (post_body_len <= 0 && clength_num > 0) {
+		reread_from_socket(accept_fd, num_read, &request);
 	}
 
 	rc = parse_body(accept_fd, num_read, &request);
