@@ -284,35 +284,63 @@ static void log_request(const http_request *request, const http_response *respon
 		free(user_agent);
 }
 
-static void reread_from_socket(const int, accept_fd, const size_t clength_num, size_t num_read, http_request *out) {
-	char *to_read = calloc(1, MAX_READ_LEN);
+static int read_max_bytes_from_socket(const int accept_fd, unsigned char *to_read, size_t *num_read) {
+	size_t read_this_time = 0;
+	while ((read_this_time = recv(accept_fd, to_read + *num_read, MAX_READ_LEN, 0))) {
+		*num_read += read_this_time;
+		if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
+			break;
+		read_this_time = 0;
 
-	/* Do we have a POST body or something? */
-	const size_t post_body_len = num_read - out->header_len;
-	if (post_body_len <= 0 && clength_num > 0) {
+		to_read = realloc(to_read, *num_read + MAX_READ_LEN);
+		if (!to_read) {
+			log_msg(LOG_ERR, "Ran out of memory reading request.");
+			goto error;
+		}
+		memset(to_read + *num_read, '\0', MAX_READ_LEN);
+	}
+
+	return 0;
+
+error:
+	return -1;
+}
+
+static void attempt_reread_from_socket(
+		const int accept_fd, const size_t clength_num,
+		const size_t post_body_len, http_request *out) {
+
+	unsigned char *to_read = NULL;
+	size_t num_read = 0;
+
+	/* If we have a post_body_len > 0, we don't have to reread from the socket. */
+	/* In addition, if we have a longer content-length than we have known post-body
+	 * length, than we should attempt to re-read from the client. */
+	if ((post_body_len <= 0 && clength_num > 0) ||
+		(post_body_len > 0 && post_body_len < clength_num)) {
+
+		to_read = calloc(1, MAX_READ_LEN);
+
 		log_msg(LOG_WARN, "Content-Length is %i but we got a post_body_len of %i.", clength_num, post_body_len);
 		log_msg(LOG_WARN, "Attempting to re-read from stream.", clength_num, post_body_len);
+		/* ------------------------------------- */
 		/* XXX: Do a select here with a timeout. */
-		size_t read_this_time = 0;
-		while ((read_this_time = recv(accept_fd, to_read + new_num_read, MAX_READ_LEN, 0))) {
-			new_num_read += read_this_time;
-			if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
-				break;
-			read_this_time = 0;
-
-			to_read = realloc(to_read, new_num_read + MAX_READ_LEN);
-			if (!to_read) {
-				log_msg(LOG_ERR, "Ran out of memory reading request.");
-				goto error;
-			}
-			memset(to_read + new_num_read, '\0', MAX_READ_LEN);
-		}
+		/* ------------------------------------- */
+		int rc = read_max_bytes_from_socket(accept_fd, to_read, &num_read);
+		if (rc != 0)
+			goto error;
 	}
+
+	out->full_body = to_read;
+	out->body_len = num_read;
+
+error:
+	free(to_read);
 }
 
 handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
 	/* TODO: Malloc here */
-	char *to_read = calloc(1, MAX_READ_LEN);
+	unsigned char *to_read = calloc(1, MAX_READ_LEN);
 	char *actual_response = NULL;
 	http_response response = {
 		.mimetype = {0},
@@ -325,26 +353,16 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	size_t num_read = 0;
 	int rc = 0;
 
-	size_t read_this_time = 0;
-	//while ((read_this_time = recv(accept_fd, to_read, MAX_READ_LEN, 0))) {
-	while ((read_this_time = recv(accept_fd, to_read + num_read, MAX_READ_LEN, 0))) {
-		num_read += read_this_time;
-		if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
-			break;
-		read_this_time = 0;
+	rc = read_max_bytes_from_socket(accept_fd, to_read, &num_read);
+	if (rc != 0)
+		goto error;
 
-		to_read = realloc(to_read, num_read + MAX_READ_LEN);
-		if (!to_read) {
-			log_msg(LOG_ERR, "Ran out of memory reading request.");
-			goto error;
-		}
-		memset(to_read + num_read, '\0', MAX_READ_LEN);
-	}
 
 	http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
+		.header_len = 0,
 		.full_header = NULL,
 		.body_len = 0,
 		.full_body = NULL
@@ -356,7 +374,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		goto error;
 	}
 
-	char *clength = get_header_value(out->full_header, out->header_len, "Content-Length");
+	char *clength = get_header_value(request.full_header, request.header_len, "Content-Length");
 	size_t clength_num = 0;
 	if (clength == NULL) {
 		log_msg(LOG_WARN, "Could not parse content length.");
@@ -366,15 +384,26 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	}
 
 	/* Do we have a POST body or something? */
-	const size_t post_body_len = num_read - out->header_len;
+	const size_t post_body_len = num_read - request.header_len;
 	if (post_body_len <= 0 && clength_num > 0) {
-		reread_from_socket(accept_fd, num_read, &request);
-	}
-
-	rc = parse_body(accept_fd, num_read, &request);
-	if (rc != 0) {
-		log_msg(LOG_ERR, "Could not parse body.");
-		goto error;
+		/* re-read will just copy into the http_request. */
+		attempt_reread_from_socket(accept_fd, clength_num, post_body_len, &request);
+	} else {
+		/* if (post_body_len > 0) { */
+		/* Parse the body into something useful. */
+		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
+		if (post_body_len < clength_num) {
+			log_msg(LOG_DEBUG, "FULL BODY: Post body length less than clength for full_body.");
+			request.body_len = post_body_len;
+			request.full_body = (unsigned char *)strndup((char *)to_read + request.header_len, request.body_len);
+		} else if (clength_num > 0 && clength_num < num_read) {
+			log_msg(LOG_DEBUG, "FULL BODY: clength is less than new_num_read for full_body.");
+			request.body_len = clength_num;
+			request.full_body = (unsigned char *)strndup((char *)to_read + request.header_len, request.body_len);
+		} else {
+			log_msg(LOG_DEBUG, "FULL BODY: full_body is going to be null.");
+			request.full_body = NULL;
+		}
 	}
 
 	/* Find our matching route: */
