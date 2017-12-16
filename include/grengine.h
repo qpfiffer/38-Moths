@@ -26,8 +26,9 @@
  * xXx verb=The HTTP verb for the given request. xXx
  * xXx resource[128]=The path for this request. (eg. '/articles/182') xXx
  * xXx matches=Any REGEX matches from your path are stored here. xXx
+ * xXx header_len=The length of the header, or 0. xXx
  * xXx full_header=The full header text of the request. xXx
- * xXx body_len=The length of the POST body, or 0.
+ * xXx body_len=The length of the POST body, or 0. xXx
  * xXx full_body=The full body. xXx
  */
 typedef struct {
@@ -35,8 +36,9 @@ typedef struct {
 	char resource[512];
 	regmatch_t matches[MAX_MATCHES];
 	char *full_header;
-	size_t body_len;
+	size_t header_len;
 	unsigned char *full_body;
+	size_t body_len;
 } http_request;
 
 /* xXx STRUCT=http_response xXx
@@ -159,3 +161,9 @@ int insert_custom_header(http_response *response, const char *header, const size
  * xXx RETURNS=0 on sucess, -1 on failure. xXx
  */
 int parse_request(const char *, const size_t, http_request *);
+
+/* xXx FUNCTION=parse_body xXx
+ * xXx DESCRIPTION=Internal function to put the body in the request header.  xXx
+ * xXx RETURNS=0 on sucess, -1 on failure. xXx
+ */
+int parse_body(const int, size_t, http_request *);

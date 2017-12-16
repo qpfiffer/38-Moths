@@ -323,9 +323,16 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		.body_len = 0,
 		.full_body = NULL
 	};
+
 	rc = parse_request(to_read, num_read, &request);
 	if (rc != 0) {
 		log_msg(LOG_ERR, "Could not parse request.");
+		goto error;
+	}
+
+	rc = parse_body(accept_fd, num_read, &request);
+	if (rc != 0) {
+		log_msg(LOG_ERR, "Could not parse body.");
 		goto error;
 	}
 

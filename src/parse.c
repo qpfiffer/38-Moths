@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <sys/socket.h>
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
@@ -115,6 +116,69 @@ char *get_header_value(const char *request, const size_t request_siz, const char
 	return data;
 }
 
+/* SIDE EFFECTY AS FUCK */
+int parse_body(const int accept_fd, size_t num_read, http_request *out) {
+	char *to_read = calloc(1, MAX_READ_LEN);
+	char *clength = get_header_value(out->full_header, out->header_len, "Content-Length");
+	size_t clength_num = 0;
+	size_t new_num_read = 0;
+	if (clength == NULL) {
+		log_msg(LOG_WARN, "Could not parse content length.");
+	} else {
+		clength_num = atoi(clength);
+		free(clength);
+	}
+
+	/* Do we have a POST body or something? */
+	const size_t post_body_len = num_read - out->header_len;
+	if (post_body_len <= 0 && clength_num > 0) {
+		log_msg(LOG_WARN, "Content-Length is %i but we got a post_body_len of %i.", clength_num, post_body_len);
+		log_msg(LOG_WARN, "Attempting to re-read from stream.", clength_num, post_body_len);
+		/* XXX: Do a select here with a timeout. */
+		size_t read_this_time = 0;
+		while ((read_this_time = recv(accept_fd, to_read + new_num_read, MAX_READ_LEN, 0))) {
+			new_num_read += read_this_time;
+			if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
+				break;
+			read_this_time = 0;
+
+			to_read = realloc(to_read, new_num_read + MAX_READ_LEN);
+			if (!to_read) {
+				log_msg(LOG_ERR, "Ran out of memory reading request.");
+				goto error;
+			}
+			memset(to_read + new_num_read, '\0', MAX_READ_LEN);
+		}
+	}
+
+	if (post_body_len > 0) {
+		/* Parse the body into something useful. */
+		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
+		if (post_body_len < clength_num) {
+			log_msg(LOG_DEBUG, "FULL BODY: Post body length less than clength for full_body.");
+			out->body_len = new_num_read;
+			out->full_body = (unsigned char *)strndup(to_read + out->header_len, out->body_len);
+		} else if (clength_num > 0 && clength_num < new_num_read) {
+			log_msg(LOG_DEBUG, "FULL BODY: clength is less than new_num_read for full_body.");
+			out->body_len = clength_num;
+			out->full_body = (unsigned char *)strndup(to_read + out->header_len, out->body_len);
+		} else {
+			log_msg(LOG_DEBUG, "FULL BODY: full_body is going to be null.");
+			out->full_body = NULL;
+		}
+	}
+
+	if (out->body_len <= 0) {
+		free(to_read);
+	}
+
+	return 0;
+
+error:
+	free(to_read);
+	return -1;
+}
+
 int parse_request(const char to_read[MAX_READ_LEN], const size_t num_read, http_request *out) {
 	/* Find the verb */
 	const char *verb_end = strnstr(to_read, " ", MAX_READ_LEN);
@@ -155,33 +219,7 @@ int parse_request(const char to_read[MAX_READ_LEN], const size_t num_read, http_
 	}
 
 	out->full_header = strndup(to_read, header_length);
-
-	/* Do we have a POST body or something? */
-	const size_t post_body_len = num_read - header_length;
-	if (post_body_len > 0) {
-		/* Parse the body into something useful. */
-		char *clength = get_header_value(out->full_header, header_length, "Content-Length");
-		size_t clength_num = 0;
-		if (clength == NULL) {
-			log_msg(LOG_WARN, "Could not parse content length.");
-		} else {
-			clength_num = atoi(clength);
-		}
-
-		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
-		if (post_body_len < clength_num) {
-			log_msg(LOG_DEBUG, "FULL BODY: Post body length less than clength for full_body.");
-			out->body_len = num_read - header_length;
-			out->full_body = (unsigned char *)strndup(to_read + header_length, out->body_len);
-		} else if (clength_num > 0 && clength_num < (size_t)num_read) {
-			log_msg(LOG_DEBUG, "FULL BODY: clength is less than num_read for full_body.");
-			out->body_len = clength_num;
-			out->full_body = (unsigned char *)strndup(to_read + header_length, out->body_len);
-		} else {
-			log_msg(LOG_DEBUG, "FULL BODY: full_body is going to be null.");
-			out->full_body = NULL;
-		}
-	}
+	out->header_len = header_length;
 
 	return 0;
 
