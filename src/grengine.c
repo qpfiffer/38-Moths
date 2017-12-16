@@ -306,7 +306,7 @@ error:
 	return -1;
 }
 
-static void attempt_reread_from_socket(
+static int attempt_reread_from_socket(
 		const int accept_fd, const size_t clength_num,
 		const size_t post_body_len, http_request *out) {
 
@@ -333,9 +333,11 @@ static void attempt_reread_from_socket(
 
 	out->full_body = to_read;
 	out->body_len = num_read;
+	return 0;
 
 error:
 	free(to_read);
+	return -1;
 }
 
 handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
@@ -387,22 +389,16 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	const size_t post_body_len = num_read - request.header_len;
 	if (post_body_len <= 0 && clength_num > 0) {
 		/* re-read will just copy into the http_request. */
-		attempt_reread_from_socket(accept_fd, clength_num, post_body_len, &request);
+		rc = attempt_reread_from_socket(accept_fd, clength_num, post_body_len, &request);
+		if (rc != 0) {
+			log_msg(LOG_ERR, "Could not reread from socket and parse body.");
+			goto error;
+		}
 	} else {
-		/* if (post_body_len > 0) { */
-		/* Parse the body into something useful. */
-		/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
-		if (post_body_len < clength_num) {
-			log_msg(LOG_DEBUG, "FULL BODY: Post body length less than clength for full_body.");
-			request.body_len = post_body_len;
-			request.full_body = (unsigned char *)strndup((char *)to_read + request.header_len, request.body_len);
-		} else if (clength_num > 0 && clength_num < num_read) {
-			log_msg(LOG_DEBUG, "FULL BODY: clength is less than new_num_read for full_body.");
-			request.body_len = clength_num;
-			request.full_body = (unsigned char *)strndup((char *)to_read + request.header_len, request.body_len);
-		} else {
-			log_msg(LOG_DEBUG, "FULL BODY: full_body is going to be null.");
-			request.full_body = NULL;
+		rc = parse_body(post_body_len, clength_num, to_read, &request);
+		if (rc != 0) {
+			log_msg(LOG_ERR, "Could not parse body.");
+			goto error;
 		}
 	}
 

@@ -98,8 +98,7 @@ int test_request_without_body_is_parseable() {
 		"User-Agent: curl/7.35.0\r\n"
 		"Host: localhost:8080\r\n"
 		"Content-Length: 6\r\n"
-		"Accept: */*\r\n\r\n"
-		"Hello!";
+		"Accept: */*\r\n\r\n";
 	http_request request = {
 		.verb = {0},
 		.resource = {0},
@@ -108,14 +107,14 @@ int test_request_without_body_is_parseable() {
 		.body_len = 0,
 		.full_body = NULL
 	};
-	int rc = parse_request(req, sizeof(req), &request);
+
+	int rc = parse_request(req, strlen((char *)req), &request);
 	if (rc != 0)
 		return 1;
-	if (strnlen(request.full_header, sizeof(req)) != sizeof(req) - 6)
+
+	if (strnlen(request.full_header, strlen((char *)req)) != strlen((char *)req))
 		return 1;
-	if (request.full_body == NULL || request.body_len != 6)
-		return 1;
-	if (sizeof((char *)request.full_body) != 6)
+	if (request.full_body != NULL || request.body_len != 0)
 		return 1;
 	return 0;
 }
@@ -134,12 +133,17 @@ int test_request_with_body_is_parseable_no_clength() {
 		.body_len = 0,
 		.full_body = NULL
 	};
-	int rc = parse_request(req, sizeof(req), &request);
+
+	int rc = parse_request(req, strlen((char *)req), &request);
 	if (rc != 0)
 		return 1;
-	if (strnlen(request.full_header, sizeof(req)) != sizeof(req))
+	rc = parse_body(strlen("{\"test\": \"asdf\"}"), 16, req, &request);
+	if (rc != 0)
 		return 1;
-	if (request.full_body != NULL || request.body_len > 0)
+
+	if (strnlen(request.full_header, strlen((char *)req)) == strlen((char *)req))
+		return 1;
+	if (request.full_body == NULL || request.body_len <= 0)
 		return 1;
 	return 0;
 }
@@ -159,10 +163,15 @@ int test_request_with_body_is_parseable() {
 		.body_len = 0,
 		.full_body = NULL
 	};
-	int rc = parse_request(req, sizeof(req), &request);
+
+	int rc = parse_request(req, strlen((char *)req), &request);
 	if (rc != 0)
 		return 1;
-	if (sizeof((const char *)request.full_body) != 16)
+	rc = parse_body(strlen("{\"test\": \"asdf\"}"), 16, req, &request);
+	if (rc != 0)
+		return 1;
+
+	if (strlen((const char *)request.full_body) != 16)
 		return 1;
 	if (request.full_body == NULL || request.body_len != 16)
 		return 1;
@@ -184,12 +193,17 @@ int test_request_body_is_extracted() {
 		.body_len = 0,
 		.full_body = NULL
 	};
-	int rc = parse_request(req, sizeof(req), &request);
+
+	int rc = parse_request(req, strlen((char *)req), &request);
 	if (rc != 0)
 		return 1;
+	rc = parse_body(strlen("Hello!"), 6, req, &request);
+	if (rc != 0)
+		return 1;
+
 	if (request.full_header == NULL || request.full_body == NULL)
 		return 1;
-	if (strnlen(request.full_header, sizeof(req)) != sizeof(req) - 6)
+	if (strnlen(request.full_header, strlen((char *)req)) != strlen((char *)req) - 6)
 		return 1;
 	if (request.full_body == NULL || request.body_len <= 0)
 		return 1;

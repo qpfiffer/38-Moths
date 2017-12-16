@@ -163,3 +163,34 @@ int parse_request(const unsigned char *to_read, const size_t num_read, http_requ
 error:
 	return -1;
 }
+
+int parse_body(const size_t received_body_len,
+			   const size_t content_length_num,
+			   const unsigned char *raw_request,
+			   http_request *request) {
+
+	const char *body_start = (char *)raw_request + request->header_len;
+	/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
+	if (content_length_num == received_body_len) {
+		request->body_len = content_length_num;
+		request->full_body = (unsigned char *)strndup(body_start, content_length_num);
+	} else if (received_body_len < content_length_num) {
+		log_msg(LOG_DEBUG, "FULL BODY: Received body length is less than clength for full_body.");
+		request->body_len = received_body_len;
+		request->full_body = (unsigned char *)strndup(body_start, request->body_len);
+	} else if (content_length_num > 0 && content_length_num < received_body_len) {
+		log_msg(LOG_DEBUG, "FULL BODY: Content length is less than total received body length.");
+		request->body_len = content_length_num;
+		request->full_body = (unsigned char *)strndup(body_start, request->body_len);
+	} else {
+		log_msg(LOG_DEBUG, "FULL BODY: Discrepancy between content-length and body length.");
+		request->full_body = NULL;
+	}
+
+	if (!request->full_body) {
+		log_msg(LOG_WARN, "No body on request, even though we expect one.");
+		return -1;
+	}
+
+	return 0;
+}

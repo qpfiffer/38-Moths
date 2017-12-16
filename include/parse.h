@@ -27,3 +27,5 @@ char *get_header_value(const char *request, const size_t request_siz, const char
  * xXx RETURNS=0 on sucess, -1 on failure. xXx
  */
 int parse_request(const unsigned char *, const size_t, http_request *);
+
+int parse_body(const size_t received_body_len, const size_t content_length_num, const unsigned char *raw_request, http_request *request);
