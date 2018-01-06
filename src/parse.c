@@ -15,13 +15,13 @@
 #include "logging.h"
 #include "utils.h"
 
-range_header parse_range_header(const char *range_query) {
+m38_range_header m38_parse_range_header(const char *range_query) {
 	/* bytes=0- */
 	/* bytes=12345-55555 */
 
 	if (strncmp(range_query, "bytes=", strlen("bytes=")) != 0) {
-		log_msg(LOG_WARN, "Malformed range query: %s", range_query);
-		range_header rng = {
+		m38_log_msg(LOG_WARN, "Malformed range query: %s", range_query);
+		m38_range_header rng = {
 			.limit = 0,
 			.offset = 0
 		};
@@ -39,8 +39,8 @@ range_header parse_range_header(const char *range_query) {
 	}
 
 	if (!found) {
-		log_msg(LOG_WARN, "Malformed range query: %s", range_query);
-		range_header rng = {
+		m38_log_msg(LOG_WARN, "Malformed range query: %s", range_query);
+		m38_range_header rng = {
 			.limit = 0,
 			.offset = 0
 		};
@@ -49,8 +49,8 @@ range_header parse_range_header(const char *range_query) {
 
 	long int _fn = strtol(actual_value, NULL, 10);
 	if ((_fn == LONG_MIN || _fn == LONG_MAX) && errno == ERANGE) {
-		log_msg(LOG_WARN, "Malformed range query, could not parse first_num: %s", range_query);
-		range_header rng = {
+		m38_log_msg(LOG_WARN, "Malformed range query, could not parse first_num: %s", range_query);
+		m38_range_header rng = {
 			.limit = 0,
 			.offset = 0
 		};
@@ -60,7 +60,7 @@ range_header parse_range_header(const char *range_query) {
 	const size_t first_num = (size_t)_fn;
 	if (i == (strlen(actual_value) - 1)) {
 		/* No second number, just return 0. */
-		range_header rng = {
+		m38_range_header rng = {
 			.limit = 0,
 			.offset = first_num
 		};
@@ -73,7 +73,7 @@ range_header parse_range_header(const char *range_query) {
 	const long int _sn = strtol(actual_value + (i + 1), NULL, 10);
 	if ((_sn == LONG_MIN || _sn == LONG_MAX) && errno == ERANGE) {
 		/* No second number, just return 0. */
-		range_header rng = {
+		m38_range_header rng = {
 			.limit = 0,
 			.offset = first_num
 		};
@@ -82,14 +82,14 @@ range_header parse_range_header(const char *range_query) {
 	const size_t second_num = _sn;
 
 	if (second_num < first_num) {
-		range_header rng = {
+		m38_range_header rng = {
 			.limit = 0,
 			.offset = first_num
 		};
 		return rng;
 	}
 
-	range_header rng = {
+	m38_range_header rng = {
 		.limit = second_num,
 		.offset = first_num
 	};
@@ -97,7 +97,7 @@ range_header parse_range_header(const char *range_query) {
 	return rng;
 }
 
-char *get_header_value_raw(const char *request, const size_t request_siz, const char header[static 1]) {
+char *m38_get_header_value_raw(const char *request, const size_t request_siz, const char header[static 1]) {
 	char *data = NULL;
 	const char *header_loc = strnstr(request, header, request_siz);
 	if (!header_loc)
@@ -116,11 +116,11 @@ char *get_header_value_raw(const char *request, const size_t request_siz, const 
 	return data;
 }
 
-char *get_header_value_request(const http_request *req, const char header[static 1]) {
-	return get_header_value_raw(req->full_header, req->header_len, header);
+char *m38_get_header_value_request(const m38_http_request *req, const char header[static 1]) {
+	return m38_get_header_value_raw(req->full_header, req->header_len, header);
 }
 
-int parse_request(const unsigned char *to_read, const size_t num_read, http_request *out) {
+int m38_parse_request(const unsigned char *to_read, const size_t num_read, m38_http_request *out) {
 	/* Find the verb */
 	const char *verb_end = strnstr((char *)to_read, " ", MAX_READ_LEN);
 	if (verb_end == NULL)
@@ -155,7 +155,7 @@ int parse_request(const unsigned char *to_read, const size_t num_read, http_requ
 	}
 
 	if (!found_end) {
-		log_msg(LOG_DEBUG, "Could not find end of HTTP header.");
+		m38_log_msg(LOG_DEBUG, "Could not find end of HTTP header.");
 		goto error;
 	}
 
@@ -168,10 +168,10 @@ error:
 	return -1;
 }
 
-int parse_body(const size_t received_body_len,
+int m38_parse_body(const size_t received_body_len,
 			   const size_t content_length_num,
 			   const unsigned char *raw_request,
-			   http_request *request) {
+			   m38_http_request *request) {
 
 	const char *body_start = (char *)raw_request + request->header_len;
 	/* We want to read the least amount. Read whatever is smallest. DO IT BECAUSE I SAY SO. */
@@ -179,20 +179,20 @@ int parse_body(const size_t received_body_len,
 		request->body_len = content_length_num;
 		request->full_body = (unsigned char *)strndup(body_start, content_length_num);
 	} else if (received_body_len < content_length_num) {
-		log_msg(LOG_DEBUG, "FULL BODY: Received body length is less than clength for full_body.");
+		m38_log_msg(LOG_DEBUG, "FULL BODY: Received body length is less than clength for full_body.");
 		request->body_len = received_body_len;
 		request->full_body = (unsigned char *)strndup(body_start, request->body_len);
 	} else if (content_length_num > 0 && content_length_num < received_body_len) {
-		log_msg(LOG_DEBUG, "FULL BODY: Content length is less than total received body length.");
+		m38_log_msg(LOG_DEBUG, "FULL BODY: Content length is less than total received body length.");
 		request->body_len = content_length_num;
 		request->full_body = (unsigned char *)strndup(body_start, request->body_len);
 	} else {
-		log_msg(LOG_DEBUG, "FULL BODY: Discrepancy between content-length and body length.");
+		m38_log_msg(LOG_DEBUG, "FULL BODY: Discrepancy between content-length and body length.");
 		request->full_body = NULL;
 	}
 
 	if (!request->full_body) {
-		log_msg(LOG_WARN, "No body on request, even though we expect one.");
+		m38_log_msg(LOG_WARN, "No body on request, even though we expect one.");
 		return -1;
 	}
 

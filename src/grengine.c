@@ -73,8 +73,8 @@ struct {
 };
 
 /* Default 404 handler. */
-int r_404_handler(const http_request *request, http_response *response);
-static const route r_404_route = {
+int r_404_handler(const m38_http_request *request, m38_http_response *response);
+static const m38_route r_404_route = {
 	.verb = "GET",
 	.route_match = "^.*$",
 	.handler = (&r_404_handler),
@@ -103,14 +103,14 @@ size_t get_response_headers_num_elements() {
 	return sizeof(response_headers)/sizeof(response_headers[0]);
 }
 
-int r_404_handler(const http_request *request, http_response *response) {
+int r_404_handler(const m38_http_request *request, m38_http_response *response) {
 	UNUSED(request);
 	response->out = (unsigned char *)"<h1>\"Welcome to Die|</h1>";
 	response->outsize = strlen("<h1>\"Welcome to Die|</h1>");
 	return 404;
 }
 
-static void guess_mimetype(const char *ending, const size_t ending_siz, http_response *response) {
+static void guess_mimetype(const char *ending, const size_t ending_siz, m38_http_response *response) {
 	int i;
 	char *type = "application/octet-stream";
 	for (i = 0; mimetype_mapping[i].ext; i++) {
@@ -122,8 +122,8 @@ static void guess_mimetype(const char *ending, const size_t ending_siz, http_res
 	strncpy(response->mimetype, type, sizeof(response->mimetype));
 }
 
-int render_file(const struct greshunkel_ctext *ctext, const char *file_path, http_response *response) {
-	int rc = mmap_file(file_path, response);
+int m38_render_file(const struct greshunkel_ctext *ctext, const char *file_path, m38_http_response *response) {
+	int rc = m38_mmap_file(file_path, response);
 	if (!RESPONSE_OK(rc))
 		return rc;
 
@@ -146,7 +146,7 @@ int render_file(const struct greshunkel_ctext *ctext, const char *file_path, htt
 	return 200;
 }
 
-static int mmap_file_ol(const char *file_path, http_response *response,
+static int mmap_file_ol(const char *file_path, m38_http_response *response,
 				 const size_t *offset, const size_t *limit) {
 	response->extra_data = calloc(1, sizeof(struct stat));
 
@@ -180,7 +180,7 @@ static int mmap_file_ol(const char *file_path, http_response *response,
 	if (response->out == MAP_FAILED) {
 		char buf[128] = {0};
 		perror(buf);
-		log_msg(LOG_ERR, "Could not mmap file: %s", buf);
+		m38_log_msg(LOG_ERR, "Could not mmap file: %s", buf);
 
 		response->out = (unsigned char *)"<html><body><p>Could not open file.</p></body></html>";
 		response->outsize= strlen("<html><body><p>could not open file.</p></body></html>");
@@ -217,57 +217,58 @@ static int mmap_file_ol(const char *file_path, http_response *response,
 	return 200;
 }
 
-int mmap_file(const char *file_path, http_response *response) {
+int m38_mmap_file(const char *file_path, m38_http_response *response) {
 	return mmap_file_ol(file_path, response, NULL, NULL);
 }
 
-void heap_cleanup(const int status_code, http_response *response) {
+void m38_heap_cleanup(const int status_code, m38_http_response *response) {
 	if (RESPONSE_OK(status_code))
 		free(response->out);
 }
 
-void mmap_cleanup(const int status_code, http_response *response) {
+void m38_mmap_cleanup(const int status_code, m38_http_response *response) {
 	if (RESPONSE_OK(status_code)) {
 		munmap(response->out, response->outsize);
 		free(response->extra_data);
 	}
 }
 
-int insert_custom_header(http_response *response, const char *header, const size_t header_len, const char *value, const size_t value_len) {
+int insert_custom_header(m38_http_response *response, const char *header, const size_t header_len,
+		const char *value, const size_t value_len) {
 	if (!header || !value || !response)
 		return 0;
 
-	header_pair *new_pair = calloc(1, sizeof(header_pair));
+	m38_header_pair *new_pair = calloc(1, sizeof(m38_header_pair));
 	if (!new_pair) {
-		log_msg(LOG_ERR, "Could not create header_pair for http_response extra headers!");
+		m38_log_msg(LOG_ERR, "Could not create header_pair for http_response extra headers!");
 		return 0;
 	}
 
 	const char *copied_header = strndup(header, header_len);
 	const char *copied_value = strndup(value, value_len);
 	if (!copied_header || !copied_value) {
-		log_msg(LOG_ERR, "Could not create copied values for http_response extra headers!");
+		m38_log_msg(LOG_ERR, "Could not create copied values for http_response extra headers!");
 		free(new_pair);
 		return 0;
 	}
 
-	header_pair _stack_pair = {
+	m38_header_pair _stack_pair = {
 		.header = copied_header,
 		.header_len = header_len,
 		.value = copied_value,
 		.value_len = value_len,
 	};
-	memcpy(new_pair, &_stack_pair, sizeof(header_pair));
+	memcpy(new_pair, &_stack_pair, sizeof(m38_header_pair));
 	vector_append_ptr(response->extra_headers, new_pair);
 
 	return 0;
 }
 
-static void log_request(const http_request *request, const http_response *response, const int response_code) {
-	char *visitor_ip_addr = get_header_value_raw(request->full_header, request->header_len, "X-Real-IP");
-	char *user_agent = get_header_value_raw(request->full_header, request->header_len, "User-Agent");
+static void log_request(const m38_http_request *request, const m38_http_response *response, const int response_code) {
+	char *visitor_ip_addr = m38_get_header_value_raw(request->full_header, request->header_len, "X-Real-IP");
+	char *user_agent = m38_get_header_value_raw(request->full_header, request->header_len, "User-Agent");
 
-	log_msg(LOG_FUN, "%s \"%s %s\" %i %i \"%s\"",
+	m38_log_msg(LOG_FUN, "%s \"%s %s\" %i %i \"%s\"",
 		visitor_ip_addr == NULL ? "NOIP" : visitor_ip_addr,
 		request->verb,
 		request->resource,
@@ -289,7 +290,7 @@ static int read_max_bytes_from_socket(const int accept_fd, unsigned char *to_rea
 
 		to_read = realloc(to_read, *num_read + MAX_READ_LEN);
 		if (!to_read) {
-			log_msg(LOG_ERR, "Ran out of memory reading request.");
+			m38_log_msg(LOG_ERR, "Ran out of memory reading request.");
 			goto error;
 		}
 		memset(to_read + *num_read, '\0', MAX_READ_LEN);
@@ -303,7 +304,7 @@ error:
 
 static int attempt_reread_from_socket(
 		const int accept_fd, const size_t clength_num,
-		const size_t post_body_len, http_request *out) {
+		const size_t post_body_len, m38_http_request *out) {
 
 	unsigned char *to_read = NULL;
 	size_t num_read = 0;
@@ -316,8 +317,8 @@ static int attempt_reread_from_socket(
 
 		to_read = calloc(1, MAX_READ_LEN);
 
-		log_msg(LOG_WARN, "Content-Length is %i but we got a post_body_len of %i.", clength_num, post_body_len);
-		log_msg(LOG_WARN, "Attempting to re-read from stream.", clength_num, post_body_len);
+		m38_log_msg(LOG_WARN, "Content-Length is %i but we got a post_body_len of %i.", clength_num, post_body_len);
+		m38_log_msg(LOG_WARN, "Attempting to re-read from stream.", clength_num, post_body_len);
 		/* ------------------------------------- */
 		/* XXX: Do a select here with a timeout. */
 		/* ------------------------------------- */
@@ -335,18 +336,18 @@ error:
 	return -1;
 }
 
-handled_request *generate_response(const int accept_fd, const route *all_routes, const size_t route_num_elements) {
+m38_handled_request *generate_response(const int accept_fd, const m38_route *all_routes, const size_t route_num_elements) {
 	/* TODO: Malloc here */
 	unsigned char *to_read = calloc(1, MAX_READ_LEN);
 	char *actual_response = NULL;
-	http_response response = {
+	m38_http_response response = {
 		.mimetype = {0},
 		0
 	};
-	response.extra_headers = vector_new(sizeof(header_pair *), 4);
+	response.extra_headers = vector_new(sizeof(m38_header_pair *), 4);
 
-	handled_request *hreq = NULL;
-	const route *matching_route = NULL;
+	m38_handled_request *hreq = NULL;
+	const m38_route *matching_route = NULL;
 	size_t num_read = 0;
 	int rc = 0;
 
@@ -355,7 +356,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		goto error;
 
 
-	http_request request = {
+	m38_http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
@@ -365,16 +366,16 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		.full_body = NULL
 	};
 
-	rc = parse_request(to_read, num_read, &request);
+	rc = m38_parse_request(to_read, num_read, &request);
 	if (rc != 0) {
-		log_msg(LOG_ERR, "Could not parse request.");
+		m38_log_msg(LOG_ERR, "Could not parse request.");
 		goto error;
 	}
 
-	char *clength = get_header_value_raw(request.full_header, request.header_len, "Content-Length");
+	char *clength = m38_get_header_value_raw(request.full_header, request.header_len, "Content-Length");
 	size_t clength_num = 0;
 	if (clength == NULL) {
-		log_msg(LOG_WARN, "Could not parse content length.");
+		m38_log_msg(LOG_WARN, "Could not parse content length.");
 	} else {
 		clength_num = atoi(clength);
 		free(clength);
@@ -383,16 +384,16 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	/* Do we have a POST body or something? */
 	const size_t post_body_len = num_read - request.header_len;
 	if (post_body_len <= 0 && clength_num > 0) {
-		/* re-read will just copy into the http_request. */
+		/* re-read will just copy into the m38_http_request. */
 		rc = attempt_reread_from_socket(accept_fd, clength_num, post_body_len, &request);
 		if (rc != 0) {
-			log_msg(LOG_ERR, "Could not reread from socket and parse body.");
+			m38_log_msg(LOG_ERR, "Could not reread from socket and parse body.");
 			goto error;
 		}
 	} else {
-		rc = parse_body(post_body_len, clength_num, to_read, &request);
+		rc = m38_parse_body(post_body_len, clength_num, to_read, &request);
 		if (rc != 0) {
-			log_msg(LOG_ERR, "Could not parse body.");
+			m38_log_msg(LOG_ERR, "Could not parse body.");
 			goto error;
 		}
 	}
@@ -400,7 +401,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	/* Find our matching route: */
 	unsigned int i;
 	for (i = 0; i < route_num_elements; i++) {
-		const route *cur_route = &all_routes[i];
+		const m38_route *cur_route = &all_routes[i];
 		if (strcmp(cur_route->verb, request.verb) != 0)
 			continue;
 
@@ -410,7 +411,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		if (reti != 0) {
 			char errbuf[128];
 			regerror(reti, &regex, errbuf, sizeof(errbuf));
-			log_msg(LOG_ERR, "%s", errbuf);
+			m38_log_msg(LOG_ERR, "%s", errbuf);
 			assert(reti == 0);
 		}
 
@@ -430,7 +431,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		matching_route = &r_404_route;
 
 	/* Run the handler through with the data we have: */
-	log_msg(LOG_INFO, "Calling handler for %s.", matching_route->name);
+	m38_log_msg(LOG_INFO, "Calling handler for %s.", matching_route->name);
 	int response_code = matching_route->handler(&request, &response);
 
 	if (response_code == 404 && (response.outsize == 0 || response.out == NULL)) {
@@ -442,7 +443,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	size_t actual_response_siz = 0;
 
 	/* Figure out if this thing needs to be partial */
-	char *range_header_value = get_header_value_raw(request.full_header, request.header_len, "Range");
+	char *range_header_value = m38_get_header_value_raw(request.full_header, request.header_len, "Range");
 	if (range_header_value && RESPONSE_OK(response_code)) {
 		response_code = 206;
 	}
@@ -471,7 +472,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 
 		size_t i = 0;
 		for (i = 0; i < response.extra_headers->count; i++) {
-			header_pair **pair = (header_pair **)vector_get(response.extra_headers, i);
+			m38_header_pair **pair = (m38_header_pair **)vector_get(response.extra_headers, i);
 			header_size += (*pair)->header_len + strlen(": ") + (*pair)->value_len
 								    + strlen("\r\n");
 		}
@@ -482,7 +483,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		/* snprintf the header because it's just a string: */
 		snprintf(actual_response, actual_response_siz, matched_response->message, response.mimetype, response.outsize);
 		for (i = 0; i < response.extra_headers->count; i++) {
-			header_pair **pair = (header_pair **)vector_get(response.extra_headers, i);
+			m38_header_pair **pair = (m38_header_pair **)vector_get(response.extra_headers, i);
 			const size_t siz = (*pair)->header_len + strlen(": ") + (*pair)->value_len
 								    + strlen("\r\n") + 1;
 			char buf[siz];
@@ -496,10 +497,10 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		memcpy(actual_response + header_size, response.out, response.outsize);
 	} else if (response_code == 206) {
 		/* Byte range queries have some extra shit. */
-		range_header byte_range = parse_range_header(range_header_value);
+		m38_range_header byte_range = m38_parse_range_header(range_header_value);
 		/* TODO: Add the custom header stuff here (for 206), too. */
 
-		log_msg(LOG_INFO, "Range header parsed: Raw: %s Limit: %zu Offset: %zu", range_header_value, byte_range.limit, byte_range.offset);
+		m38_log_msg(LOG_INFO, "Range header parsed: Raw: %s Limit: %zu Offset: %zu", range_header_value, byte_range.limit, byte_range.offset);
 		free(range_header_value);
 
 		const size_t start_byte = byte_range.offset < response.outsize ? byte_range.offset : 0;
@@ -523,7 +524,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		snprintf(actual_response, actual_response_siz, matched_response->message,
 			response.mimetype, max_size,
 			start_byte, end_byte, max_size);
-		log_msg(LOG_INFO, "Sending back: Content-Range: %zu-%zu/%zu", start_byte, end_byte, max_size);
+		m38_log_msg(LOG_INFO, "Sending back: Content-Range: %zu-%zu/%zu", start_byte, end_byte, max_size);
 		strncat(actual_response, r_final, strlen(r_final));
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out + start_byte, end_byte - start_byte);
@@ -531,7 +532,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 
 	log_request(&request, &response, response_code);
 
-	hreq = malloc(sizeof(handled_request));
+	hreq = malloc(sizeof(m38_handled_request));
 	hreq->response_bytes = actual_response;
 	hreq->response_len = actual_response_siz;
 	hreq->response_code = response_code;
@@ -555,10 +556,10 @@ error:
 	return NULL;
 }
 
-static void _clean_up_extra_headers(http_response *response) {
+static void _clean_up_extra_headers(m38_http_response *response) {
 	size_t i = 0;
 	for (i = 0; i < response->extra_headers->count; i++) {
-		header_pair **pair = (header_pair **)vector_get(response->extra_headers, i);
+		m38_header_pair **pair = (m38_header_pair **)vector_get(response->extra_headers, i);
 		free((char *)(*pair)->header);
 		free((char *)(*pair)->value);
 		free(*pair);
@@ -566,15 +567,15 @@ static void _clean_up_extra_headers(http_response *response) {
 	vector_free(response->extra_headers);
 }
 
-handled_request *send_response(handled_request *hreq) {
+m38_handled_request *send_response(m38_handled_request *hreq) {
 	/* Send that shit over the wire: */
-	const route *matching_route = hreq->matching_route;
+	const m38_route *matching_route = hreq->matching_route;
 
 	const size_t bytes_left = hreq->response_len - hreq->sent;
 	const size_t to_send = bytes_left < 4096 ? bytes_left : 4096;
 	int rc = send(hreq->accept_fd, hreq->response_bytes + hreq->sent, to_send, 0);
 	if (rc <= 0) {
-		log_msg(LOG_ERR, "Could not send response.");
+		m38_log_msg(LOG_ERR, "Could not send response.");
 		goto error;
 	}
 
@@ -582,7 +583,7 @@ handled_request *send_response(handled_request *hreq) {
 
 	if (hreq->response_len - hreq->sent <= 0) {
 		if (matching_route->cleanup != NULL) {
-			log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
+			m38_log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
 			if (matching_route->cleanup)
 				matching_route->cleanup(hreq->response_code, &hreq->response);
 		}

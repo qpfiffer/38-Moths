@@ -3,7 +3,7 @@
 #include "utils.h"
 
 struct route;
-/* xXx FUNCTION=http_serve xXx
+/* xXx FUNCTION=m38_http_serve xXx
  * xXx DESCRIPTION=Starts and runs the HTTP server. xXx
  * xXx RETURNS=0 on success, -1 on failure. xXx
  * xXx *main_sock_fd=A pointer to the main socket fd. This is a pointer so you can handle SIG* cleanly and shut down the socket. xXx
@@ -12,5 +12,5 @@ struct route;
  * xXx *routes=The array of all routes for your application. xXx
  * xXx num_routes=The number of routes in <code>*routes</code>. xXx
  */
-int http_serve(int *main_sock_fd, const int port, const int num_threads,
+int m38_http_serve(int *main_sock_fd, const int port, const int num_threads,
 		const struct route *routes, const size_t num_routes);

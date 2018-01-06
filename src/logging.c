@@ -7,7 +7,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-void log_msg(log_level level, const char *fmsg, ...) {
+void m38_log_msg(log_level level, const char *fmsg, ...) {
 	char buffer[100];
 	char msg[800];
 	va_list ap;

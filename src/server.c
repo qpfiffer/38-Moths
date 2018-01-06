@@ -31,12 +31,12 @@
 #define ACCEPTED_SOCKET_QUEUE_NAME "/mothsaqueue"
 #define HANDLED_CONNECTION_QUEUE_NAME "/mothshqueue"
 
-typedef struct acceptor_arg {
+typedef struct {
 	const int main_sock_fd;
 } acceptor_arg;
 
-typedef struct handler_arg {
-	const route *all_routes;
+typedef struct {
+	const m38_route *all_routes;
 	const size_t num_routes;
 	const int worker_ident;
 } handler_arg;
@@ -63,7 +63,7 @@ static void *acceptor(void *arg) {
 
 	accepted_socket_queue = _open_queue(ACCEPTED_SOCKET_QUEUE_NAME, O_WRONLY, sizeof(int));
 	if (accepted_socket_queue == -1) {
-		log_msg(LOG_ERR, "Acceptor: Could not open accepted_socket_queue.");
+		m38_log_msg(LOG_ERR, "Acceptor: Could not open accepted_socket_queue.");
 		perror("Acceptor: ");
 		return NULL;
 	}
@@ -75,14 +75,14 @@ static void *acceptor(void *arg) {
 		int new_fd = accept(main_sock_fd, (struct sockaddr *)&their_addr, &sin_size);
 
 		if (new_fd == -1) {
-			log_msg(LOG_ERR, "Acceptor: Could not accept new connection.");
+			m38_log_msg(LOG_ERR, "Acceptor: Could not accept new connection.");
 			return NULL;
 		}
 
 		ssize_t msg_size = mq_send(accepted_socket_queue, (char *)&new_fd, sizeof(int), 0);
 		if (msg_size == -1) {
 			/* We want to continue from this error. Maybe the queue is full or something. */
-			log_msg(LOG_ERR, "Acceptor: Could not queue new accepted connection.");
+			m38_log_msg(LOG_ERR, "Acceptor: Could not queue new accepted connection.");
 			close(new_fd);
 		}
 	}
@@ -96,29 +96,29 @@ static void *responder(void *arg) {
 	mqd_t handled_queue = -1;
 	handled_queue = mq_open(HANDLED_CONNECTION_QUEUE_NAME, O_RDWR);
 	if (handled_queue == -1) {
-		log_msg(LOG_ERR, "Responder: Could not open handled queue.");
+		m38_log_msg(LOG_ERR, "Responder: Could not open handled queue.");
 		perror("Responder: ");
 		return NULL;
 	}
 
 	while(1) {
-		handled_request *req = NULL;
-		ssize_t msg_size = mq_receive(handled_queue, (char *)&req, sizeof(handled_request *), NULL);
+		m38_handled_request *req = NULL;
+		ssize_t msg_size = mq_receive(handled_queue, (char *)&req, sizeof(m38_handled_request *), NULL);
 
 		if (msg_size == -1) {
-			log_msg(LOG_ERR, "Responder: Could not read from handled_queue.");
+			m38_log_msg(LOG_ERR, "Responder: Could not read from handled_queue.");
 			perror("Responder: ");
 			break;
 		} else if (req == NULL) {
-			log_msg(LOG_ERR, "Responder: Got bogus request from queue.");
+			m38_log_msg(LOG_ERR, "Responder: Got bogus request from queue.");
 		} else {
-			handled_request *new_req = send_response(req);
+			m38_handled_request *new_req = m38_send_response(req);
 			if (new_req != NULL) {
-				ssize_t msg_size = mq_send(handled_queue, (char *)&new_req, sizeof(handled_request *), 0);
+				ssize_t msg_size = mq_send(handled_queue, (char *)&new_req, sizeof(m38_handled_request *), 0);
 				if (msg_size == -1)
-					log_msg(LOG_ERR, "Responder: Could not enqueue handled response.");
+					m38_log_msg(LOG_ERR, "Responder: Could not enqueue handled response.");
 			} else {
-				log_msg(LOG_FUN, "Responder: Response sent.");
+				m38_log_msg(LOG_FUN, "Responder: Response sent.");
 			}
 		}
 	}
@@ -133,19 +133,19 @@ static void *handler(void *arg) {
 	mqd_t handled_queue = -1;
 	const handler_arg *args = arg;
 	const size_t num_routes = args->num_routes;
-	const route *all_routes = args->all_routes;
+	const m38_route *all_routes = args->all_routes;
 	const int worker_ident = args->worker_ident;
 
 	accepted_socket_queue = mq_open(ACCEPTED_SOCKET_QUEUE_NAME, O_RDONLY);
 	if (accepted_socket_queue == -1) {
-		log_msg(LOG_ERR, "Worker %i: Could not open accepted_socket_queue.", worker_ident);
+		m38_log_msg(LOG_ERR, "Worker %i: Could not open accepted_socket_queue.", worker_ident);
 		perror("Worker: ");
 		return NULL;
 	}
 
 	handled_queue = mq_open(HANDLED_CONNECTION_QUEUE_NAME, O_WRONLY);
 	if (handled_queue == -1) {
-		log_msg(LOG_ERR, "Worker %i: Could not open handled queue.", worker_ident);
+		m38_log_msg(LOG_ERR, "Worker %i: Could not open handled queue.", worker_ident);
 		perror("Worker: ");
 		return NULL;
 	}
@@ -155,25 +155,25 @@ static void *handler(void *arg) {
 		ssize_t msg_size = mq_receive(accepted_socket_queue, (char *)&new_fd, sizeof(int), NULL);
 
 		if (msg_size == -1) {
-			log_msg(LOG_ERR, "Worker %i: Could not read from accepted_socket_queue.", worker_ident);
+			m38_log_msg(LOG_ERR, "Worker %i: Could not read from accepted_socket_queue.", worker_ident);
 			break;
 		} else if (new_fd == -1) {
-			log_msg(LOG_ERR, "Worker %i: Got bogus FD from accepted_socket_queue.", worker_ident);
+			m38_log_msg(LOG_ERR, "Worker %i: Got bogus FD from accepted_socket_queue.", worker_ident);
 			break;
 		} else {
-			log_msg(LOG_FUN, "Worker %i: Handling response.", worker_ident);
-			handled_request *req = generate_response(new_fd, all_routes, num_routes);
+			m38_log_msg(LOG_FUN, "Worker %i: Handling response.", worker_ident);
+			m38_handled_request *req = m38_generate_response(new_fd, all_routes, num_routes);
 
-			ssize_t msg_size = mq_send(handled_queue, (char *)&req, sizeof(handled_request *), 0);
+			ssize_t msg_size = mq_send(handled_queue, (char *)&req, sizeof(m38_handled_request *), 0);
 			if (msg_size == -1)
-				log_msg(LOG_ERR, "Worker %i: Could not enqueue handled response.", worker_ident);
+				m38_log_msg(LOG_ERR, "Worker %i: Could not enqueue handled response.", worker_ident);
 		}
 
 		struct mq_attr attr = {0};
 		if (mq_getattr(accepted_socket_queue, &attr) == 0) {
-			log_msg(LOG_INFO, "Acceptor: Number of items on the queue: %i", attr.mq_curmsgs);
+			m38_log_msg(LOG_INFO, "Acceptor: Number of items on the queue: %i", attr.mq_curmsgs);
 		} else {
-			log_msg(LOG_INFO, "Acceptor: Could not pull items from queue.");
+			m38_log_msg(LOG_INFO, "Acceptor: Could not pull items from queue.");
 			perror("Acceptor MQ Problem: ");
 		}
 	}
@@ -187,7 +187,7 @@ static inline int create_socket(const int port) {
 	int rc = -1;
 	int sock_fd = socket(PF_INET, SOCK_STREAM, 0);
 	if (sock_fd <= 0) {
-		log_msg(LOG_ERR, "Could not create main socket.");
+		m38_log_msg(LOG_ERR, "Could not create main socket.");
 		goto error;
 	}
 
@@ -201,16 +201,16 @@ static inline int create_socket(const int port) {
 
 	rc = bind(sock_fd, (struct sockaddr *)&hints, sizeof(hints));
 	if (rc < 0) {
-		log_msg(LOG_ERR, "Could not bind main socket.");
+		m38_log_msg(LOG_ERR, "Could not bind main socket.");
 		goto error;
 	}
 
 	rc = listen(sock_fd, 0);
 	if (rc < 0) {
-		log_msg(LOG_ERR, "Could not listen on main socket.");
+		m38_log_msg(LOG_ERR, "Could not listen on main socket.");
 		goto error;
 	}
-	log_msg(LOG_FUN, "Listening on http://localhost:%i/", port);
+	m38_log_msg(LOG_FUN, "Listening on http://localhost:%i/", port);
 
 	return sock_fd;
 
@@ -222,7 +222,7 @@ error:
 int http_serve(int *main_sock_fd,
 		const int port,
 		const int num_threads,
-		const struct route *routes,
+		const m38_route *routes,
 		const size_t num_routes) {
 	mqd_t po_accepted_queue = -1;
 	mqd_t po_handled_queue = -1;
@@ -241,49 +241,49 @@ int http_serve(int *main_sock_fd,
 	 * stale messages.
 	 */
 	if (mq_unlink(ACCEPTED_SOCKET_QUEUE_NAME) == 0) {
-		log_msg(LOG_INFO, "Purged old socket queue.");
+		m38_log_msg(LOG_INFO, "Purged old socket queue.");
 	}
 
 	if (mq_unlink(HANDLED_CONNECTION_QUEUE_NAME) == 0) {
-		log_msg(LOG_INFO, "Purged old handled queue.");
+		m38_log_msg(LOG_INFO, "Purged old handled queue.");
 	}
 
 	/* We precreate the queue here to guarantee that everyone else will have access to it. */
 	po_accepted_queue = _open_queue(ACCEPTED_SOCKET_QUEUE_NAME, O_RDWR | O_CREAT, sizeof(int));
 	if (po_accepted_queue == -1) {
-		log_msg(LOG_ERR, "Could not preopen accepted_socket_queue.");
+		m38_log_msg(LOG_ERR, "Could not preopen accepted_socket_queue.");
 		perror("Main Thread");
 		goto error;
 	}
 
-	po_handled_queue = _open_queue(HANDLED_CONNECTION_QUEUE_NAME, O_RDWR | O_CREAT, sizeof(handled_request *));
+	po_handled_queue = _open_queue(HANDLED_CONNECTION_QUEUE_NAME, O_RDWR | O_CREAT, sizeof(m38_handled_request *));
 	if (po_accepted_queue == -1) {
-		log_msg(LOG_ERR, "Could not preopen handled socket queue..");
+		m38_log_msg(LOG_ERR, "Could not preopen handled socket queue..");
 		perror("Main Thread");
 		goto error;
 	}
 
-	struct acceptor_arg args = {
+	acceptor_arg args = {
 		.main_sock_fd = *main_sock_fd,
 	};
 
 	if (pthread_create(&acceptor_enqueuer, NULL, acceptor, &args) != 0) {
-		log_msg(LOG_ERR, "Could not start acceptor thread.");
+		m38_log_msg(LOG_ERR, "Could not start acceptor thread.");
 		goto error;
 	}
 
-	log_msg(LOG_INFO, "Acceptor thread started.");
+	m38_log_msg(LOG_INFO, "Acceptor thread started.");
 
 	if (pthread_create(&responder_worker, NULL, responder, NULL) != 0) {
-		log_msg(LOG_ERR, "Could not start responder thread.");
+		m38_log_msg(LOG_ERR, "Could not start responder thread.");
 		goto error;
 	}
 
-	log_msg(LOG_INFO, "Responder thread started.");
+	m38_log_msg(LOG_INFO, "Responder thread started.");
 
 	int i;
 	for (i = 0; i < num_threads; i++) {
-		struct handler_arg args = {
+		handler_arg args = {
 			.all_routes = routes,
 			.num_routes = num_routes,
 			.worker_ident = i
@@ -291,25 +291,25 @@ int http_serve(int *main_sock_fd,
 		if (pthread_create(&handlers[i], NULL, handler, &args) != 0) {
 			goto error;
 		}
-		log_msg(LOG_INFO, "Worker thread %i started.", i);
+		m38_log_msg(LOG_INFO, "Worker thread %i started.", i);
 	}
 
 	if (mq_close(po_accepted_queue) == -1) {
-		log_msg(LOG_ERR, "Main thread: Could not close accepted queue.");
+		m38_log_msg(LOG_ERR, "Main thread: Could not close accepted queue.");
 		goto error;
 	}
 
 	if (mq_close(po_handled_queue) == -1) {
-		log_msg(LOG_ERR, "Main thread: Could not close handled queue.");
+		m38_log_msg(LOG_ERR, "Main thread: Could not close handled queue.");
 		goto error;
 	}
 
 	for (i = 0; i < num_threads; i++) {
 		pthread_join(handlers[i], NULL);
-		log_msg(LOG_INFO, "Worker thread %i stopped.", i);
+		m38_log_msg(LOG_INFO, "Worker thread %i stopped.", i);
 	}
 	pthread_join(acceptor_enqueuer, NULL);
-	log_msg(LOG_INFO, "Acceptor thread stopped.");
+	m38_log_msg(LOG_INFO, "Acceptor thread stopped.");
 
 	close(*main_sock_fd);
 	return 0;

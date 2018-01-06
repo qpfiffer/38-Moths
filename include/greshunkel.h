@@ -177,12 +177,12 @@ int gshkl_add_filter(greshunkel_ctext *ctext,
 		char *(*filter_func)(const char *argument),
 		void (*clean_up)(char *filter_result));
 
-/* xXx FUNCTION=filter_cleanup xXx
+/* xXx FUNCTION=gshkl_filter_cleanup xXx
  * xXx DESCRIPTION=Commonly used helper clean-up function that just calls free on the result. xXx
  * xXx RETURNS=Nothing. xXx
  * xXx *result=The value obtained from calling your filter function. xXx
  */
-void filter_cleanup(char *result);
+void gshkl_filter_cleanup(char *result);
 
 /* xXx FUNCTION=gshkl_render xXx
  * xXx DESCRIPTION=Renders a template context. xXx

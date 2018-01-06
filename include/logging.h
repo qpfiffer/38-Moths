@@ -10,4 +10,8 @@ typedef enum {
 	LOG_DB
 } log_level;
 
-void log_msg(log_level level, const char *fmsg, ...);
+/* xXx DEFINE=m38_log_msg xXx
+ * xXx DESCRIPTION=Internal logging utility. xXx
+ * xXx RETURNS=Nothin' xXx
+ */
+void m38_log_msg(log_level level, const char *fmsg, ...);

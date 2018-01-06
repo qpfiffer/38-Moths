@@ -15,14 +15,14 @@
 #include "vector.h"
 
 /* Taken from OlegDB */
-#define run_test(test) log_msg(LOG_INFO, "----- %s -----", #test);\
+#define run_test(test) m38_log_msg(LOG_INFO, "----- %s -----", #test);\
 	test_return_val = test();\
 	if (test_return_val != 0) {\
 		tests_failed++;\
-		log_msg(LOG_ERR, "%c[%dmFailed.%c[%dm\n", 0x1B, 31, 0x1B, 0);\
+		m38_log_msg(LOG_ERR, "%c[%dmFailed.%c[%dm\n", 0x1B, 31, 0x1B, 0);\
 	} else {\
 		tests_run++;\
-		log_msg(LOG_INFO, "%c[%dmPassed.%c[%dm\n", 0x1B, 32, 0x1B, 0);\
+		m38_log_msg(LOG_INFO, "%c[%dmPassed.%c[%dm\n", 0x1B, 32, 0x1B, 0);\
 	}
 
 int test_vector() {
@@ -99,7 +99,7 @@ int test_request_without_body_is_parseable() {
 		"Host: localhost:8080\r\n"
 		"Content-Length: 6\r\n"
 		"Accept: */*\r\n\r\n";
-	http_request request = {
+	m38_http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
@@ -108,7 +108,7 @@ int test_request_without_body_is_parseable() {
 		.full_body = NULL
 	};
 
-	int rc = parse_request(req, strlen((char *)req), &request);
+	int rc = m38_parse_request(req, strlen((char *)req), &request);
 	if (rc != 0)
 		return 1;
 
@@ -125,7 +125,7 @@ int test_request_with_body_is_parseable_no_clength() {
 		"Host: localhost:8080\r\n"
 		"Accept: */*\r\n\r\n"
 		"{\"test\": \"asdf\"}";
-	http_request request = {
+	m38_http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
@@ -134,10 +134,10 @@ int test_request_with_body_is_parseable_no_clength() {
 		.full_body = NULL
 	};
 
-	int rc = parse_request(req, strlen((char *)req), &request);
+	int rc = m38_parse_request(req, strlen((char *)req), &request);
 	if (rc != 0)
 		return 1;
-	rc = parse_body(strlen("{\"test\": \"asdf\"}"), 16, req, &request);
+	rc = m38_parse_body(strlen("{\"test\": \"asdf\"}"), 16, req, &request);
 	if (rc != 0)
 		return 1;
 
@@ -155,7 +155,7 @@ int test_request_with_body_is_parseable() {
 		"Accept: */*\r\n"
 		"Content-Length: 16\r\n\r\n"
 		"{\"test\": \"asdf\"}";
-	http_request request = {
+	m38_http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
@@ -164,10 +164,10 @@ int test_request_with_body_is_parseable() {
 		.full_body = NULL
 	};
 
-	int rc = parse_request(req, strlen((char *)req), &request);
+	int rc = m38_parse_request(req, strlen((char *)req), &request);
 	if (rc != 0)
 		return 1;
-	rc = parse_body(strlen("{\"test\": \"asdf\"}"), 16, req, &request);
+	rc = m38_parse_body(strlen("{\"test\": \"asdf\"}"), 16, req, &request);
 	if (rc != 0)
 		return 1;
 
@@ -185,7 +185,7 @@ int test_request_body_is_extracted() {
 		"Content-Length: 6\r\n"
 		"Accept: */*\r\n\r\n"
 		"Hello!";
-	http_request request = {
+	m38_http_request request = {
 		.verb = {0},
 		.resource = {0},
 		.matches = {{0}},
@@ -194,10 +194,10 @@ int test_request_body_is_extracted() {
 		.full_body = NULL
 	};
 
-	int rc = parse_request(req, strlen((char *)req), &request);
+	int rc = m38_parse_request(req, strlen((char *)req), &request);
 	if (rc != 0)
 		return 1;
-	rc = parse_body(strlen("Hello!"), 6, req, &request);
+	rc = m38_parse_body(strlen("Hello!"), 6, req, &request);
 	if (rc != 0)
 		return 1;
 
@@ -215,7 +215,7 @@ int test_request_body_is_extracted() {
 int main(int argc, char *argv[]) {
 	UNUSED(argc);
 	UNUSED(argv);
-	log_msg(LOG_INFO, "Running tests.\n");
+	m38_log_msg(LOG_INFO, "Running tests.\n");
 
 	int test_return_val = 0 ;
 	int tests_run = 0;
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
 	run_test(test_request_body_is_extracted);
 	run_test(test_request_with_body_is_parseable_no_clength);
 
-	log_msg(LOG_INFO, "Tests passed: (%i/%i).\n", tests_run, tests_run + tests_failed);
+	m38_log_msg(LOG_INFO, "Tests passed: (%i/%i).\n", tests_run, tests_run + tests_failed);
 
 	if (tests_run != tests_run + tests_failed)
 		return 1;

@@ -7,6 +7,8 @@
 #define VERSION "0.1"
 
 #include "logging.h"
+#include "simple_sparsehash.h"
+#include "cookie.h"
 #include "utils.h"
 #include "vector.h"
 #include "greshunkel.h"
