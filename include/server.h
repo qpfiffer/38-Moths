@@ -1,6 +1,7 @@
 // vim: noet ts=4 sw=4
 #pragma once
 #include "utils.h"
+#include "types.h"
 
 struct route;
 /* xXx FUNCTION=m38_http_serve xXx
@@ -13,4 +14,4 @@ struct route;
  * xXx num_routes=The number of routes in <code>*routes</code>. xXx
  */
 int m38_http_serve(int *main_sock_fd, const int port, const int num_threads,
-		const struct route *routes, const size_t num_routes);
+		const m38_route *routes, const size_t num_routes);

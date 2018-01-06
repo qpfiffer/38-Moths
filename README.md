@@ -17,11 +17,11 @@ sudo make install
 # Why
 
 I wanted a minimal, fast webserver/framework thing that I could just install,
-link with and go. No package management shit, no weird languages-of-the-week to
-install, just C. It should be a minimal scaffold to build shit off of that I can
+link with and go. No package management, no weird languages-of-the-week to
+install, just C. It should be a minimal scaffold to build things off of that I can
 run in a tmux session _ad infinitum_. It should have zero dependencies, because
 its just a goddamn webserver. I don't need boost, a weird allocator, stupid
-google dependencies or anything else. It's just sockets and bytes and shit. It's
+google dependencies or anything else. It's just sockets and bytes and whatever. It's
 POSIX as all hell.
 
 # Usage

@@ -5,16 +5,16 @@
 
 int main_sock_fd;
 
-static int index_handler(const http_request *request, http_response *response) {
-	insert_custom_header(response, "Location", strlen("Location"), "http://google.com/", strlen("http://google.com/"));
+static int index_handler(const m38_http_request *request, m38_http_response *response) {
+	m38_insert_custom_header(response, "Location", strlen("Location"), "http://google.com/", strlen("http://google.com/"));
 	return 302;
 }
 
-static const route all_routes[] = {
+static const m38_route all_routes[] = {
 	{"GET", "root_handler", "^/$", 0, &index_handler, NULL},
 };
 
 int main(int argc, char *argv[]) {
-	http_serve(&main_sock_fd, 8080, 2, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
+	m38_http_serve(&main_sock_fd, 8080, 2, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
 	return 0;
 }
