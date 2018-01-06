@@ -16,11 +16,17 @@ typedef struct range_header {
 /* FUCK THE MUTEABLE STATE */
 range_header parse_range_header(const char *range_query);
 
-/* xXx FUNCTION=get_header_value xXx
+/* xXx FUNCTION=get_header_value_raw xXx
+ * xXx DESCRIPTION=Gets the value of `header` (eg. Content-Length) from an http_request object. Wraps get_header_value_raw. xXx
+ * xXx RETURNS=The char string representing the header value, or NULL. Must be free'd. xXx
+ */
+char *get_header_value_request(const http_request *req, const char header[static 1]);
+
+/* xXx FUNCTION=get_header_value_raw xXx
  * xXx DESCRIPTION=Gets the value of `header` (eg. Content-Length) from a raw http request string. xXx
  * xXx RETURNS=The char string representing the header value, or NULL. Must be free'd. xXx
  */
-char *get_header_value(const char *request, const size_t request_siz, const char header[static 1]);
+char *get_header_value_raw(const char *request, const size_t request_siz, const char header[static 1]);
 
 /* xXx FUNCTION=parse_request xXx
  * xXx DESCRIPTION=Turns a raw string buffer into an http_request object. xXx

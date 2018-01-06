@@ -264,24 +264,19 @@ int insert_custom_header(http_response *response, const char *header, const size
 }
 
 static void log_request(const http_request *request, const http_response *response, const int response_code) {
-	char *visitor_ip_addr = get_header_value(request->full_header, strlen(request->full_header), "X-Real-IP");
-	char *user_agent = get_header_value(request->full_header, strlen(request->full_header), "User-Agent");
-
-	if (visitor_ip_addr == NULL)
-		visitor_ip_addr = "NOIP";
-
-	if (user_agent == NULL)
-		user_agent = "NOUSERAGENT";
+	char *visitor_ip_addr = get_header_value_raw(request->full_header, request->header_len, "X-Real-IP");
+	char *user_agent = get_header_value_raw(request->full_header, request->header_len, "User-Agent");
 
 	log_msg(LOG_FUN, "%s \"%s %s\" %i %i \"%s\"",
-		visitor_ip_addr, request->verb, request->resource,
-		response_code, response->outsize, user_agent);
+		visitor_ip_addr == NULL ? "NOIP" : visitor_ip_addr,
+		request->verb,
+		request->resource,
+		response_code,
+		response->outsize,
+		user_agent == NULL ? "NOUSERAGENT" : user_agent);
 
-	if (strncmp(visitor_ip_addr, "NOIP", strlen("NOIP")) != 0)
-		free(visitor_ip_addr);
-
-	if (strncmp(user_agent, "NOUSERAGENT", strlen("NOUSERAGENT")) != 0)
-		free(user_agent);
+	free(visitor_ip_addr);
+	free(user_agent);
 }
 
 static int read_max_bytes_from_socket(const int accept_fd, unsigned char *to_read, size_t *num_read) {
@@ -376,7 +371,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 		goto error;
 	}
 
-	char *clength = get_header_value(request.full_header, request.header_len, "Content-Length");
+	char *clength = get_header_value_raw(request.full_header, request.header_len, "Content-Length");
 	size_t clength_num = 0;
 	if (clength == NULL) {
 		log_msg(LOG_WARN, "Could not parse content length.");
@@ -447,7 +442,7 @@ handled_request *generate_response(const int accept_fd, const route *all_routes,
 	size_t actual_response_siz = 0;
 
 	/* Figure out if this thing needs to be partial */
-	char *range_header_value = get_header_value(request.full_header, strlen(request.full_header), "Range");
+	char *range_header_value = get_header_value_raw(request.full_header, request.header_len, "Range");
 	if (range_header_value && RESPONSE_OK(response_code)) {
 		response_code = 206;
 	}

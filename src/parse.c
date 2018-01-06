@@ -97,7 +97,7 @@ range_header parse_range_header(const char *range_query) {
 	return rng;
 }
 
-char *get_header_value(const char *request, const size_t request_siz, const char header[static 1]) {
+char *get_header_value_raw(const char *request, const size_t request_siz, const char header[static 1]) {
 	char *data = NULL;
 	const char *header_loc = strnstr(request, header, request_siz);
 	if (!header_loc)
@@ -114,6 +114,10 @@ char *get_header_value(const char *request, const size_t request_siz, const char
 	strncpy(data, header_value_start, header_value_size);
 
 	return data;
+}
+
+char *get_header_value_request(const http_request *req, const char header[static 1]) {
+	return get_header_value_raw(req->full_header, req->header_len, header);
 }
 
 int parse_request(const unsigned char *to_read, const size_t num_read, http_request *out) {
