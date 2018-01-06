@@ -219,7 +219,7 @@ error:
 	return -1;
 }
 
-int http_serve(int *main_sock_fd,
+int m38_http_serve(int *main_sock_fd,
 		const int port,
 		const int num_threads,
 		const m38_route *routes,

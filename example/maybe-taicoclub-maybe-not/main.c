@@ -9,7 +9,7 @@ const char taico_id[] = "3NZGbD236fw";
 
 int main_sock_fd;
 
-static int index_handler(const http_request *request, http_response *response) {
+static int index_handler(const m38_http_request *request, m38_http_response *response) {
 	const size_t board_len = request->matches[1].rm_eo - request->matches[1].rm_so;
 	char buf[128] = {0};
 	strncpy(buf, request->resource + request->matches[1].rm_so, sizeof(buf));
@@ -21,15 +21,15 @@ static int index_handler(const http_request *request, http_response *response) {
 		gshkl_add_string(ctext, "VIDEO_ID", taico_id);
 	}
 
-	return render_file(ctext, "./index.html", response);
+	return m38_render_file(ctext, "./index.html", response);
 }
 
-static const route all_routes[] = {
-	{"GET", "root_handler", "^/([a-zA-Z]+)$", 2, &index_handler, &heap_cleanup},
+static const m38_route all_routes[] = {
+	{"GET", "root_handler", "^/([a-zA-Z]+)$", 2, &index_handler, &m38_heap_cleanup},
 };
 
 int main(int argc, char *argv[]) {
 	srandom(time(NULL));
-	http_serve(&main_sock_fd, 8081, 2, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
+	m38_http_serve(&main_sock_fd, 8081, 2, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
 	return 0;
 }

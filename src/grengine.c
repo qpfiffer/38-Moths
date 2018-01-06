@@ -233,7 +233,7 @@ void m38_mmap_cleanup(const int status_code, m38_http_response *response) {
 	}
 }
 
-int insert_custom_header(m38_http_response *response, const char *header, const size_t header_len,
+int m38_insert_custom_header(m38_http_response *response, const char *header, const size_t header_len,
 		const char *value, const size_t value_len) {
 	if (!header || !value || !response)
 		return 0;
@@ -336,7 +336,7 @@ error:
 	return -1;
 }
 
-m38_handled_request *generate_response(const int accept_fd, const m38_route *all_routes, const size_t route_num_elements) {
+m38_handled_request *m38_generate_response(const int accept_fd, const m38_route *all_routes, const size_t route_num_elements) {
 	/* TODO: Malloc here */
 	unsigned char *to_read = calloc(1, MAX_READ_LEN);
 	char *actual_response = NULL;
@@ -567,7 +567,7 @@ static void _clean_up_extra_headers(m38_http_response *response) {
 	vector_free(response->extra_headers);
 }
 
-m38_handled_request *send_response(m38_handled_request *hreq) {
+m38_handled_request *m38_send_response(m38_handled_request *hreq) {
 	/* Send that shit over the wire: */
 	const m38_route *matching_route = hreq->matching_route;
 
