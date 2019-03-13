@@ -1,0 +1,40 @@
+VERSION=0.1
+CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O0 -ffunction-sections -fdata-sections -g
+INCLUDES=-pthread -I./include/
+LIBS=-lm -lrt
+COMMON_OBJ=38-moths.o
+NAME=lib38moths.so
+
+PREFIX?=/usr/local
+INSTALL_LIB=$(PREFIX)/lib/
+INSTALL_INCLUDE=$(PREFIX)/include/38-moths/
+
+
+all: lib
+
+clean:
+	rm -f *.o
+	rm -f $(NAME)
+
+%.o: ./%.c
+	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c -fPIC $<
+
+lib: $(NAME)
+$(NAME): $(COMMON_OBJ)
+	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(NAME) -shared $^ $(LIBS)
+
+install: all
+	@mkdir -p $(INSTALL_LIB)
+	@mkdir -p $(INSTALL_INCLUDE)
+	@install $(NAME) $(INSTALL_LIB)$(NAME).$(VERSION)
+	@ln -fs $(INSTALL_LIB)$(NAME).$(VERSION) $(INSTALL_LIB)$(NAME)
+	@ln -fs $(INSTALL_LIB)$(NAME).$(VERSION) $(INSTALL_LIB)$(NAME).0
+	@install ./include/*.h $(INSTALL_INCLUDE)
+	@ldconfig $(INSTALL_LIB)
+	@echo "38-moths installed to $(PREFIX) :^)."
+
+uninstall:
+	rm -rf $(INSTALL_LIB)$(NAME).$(VERSION)
+	rm -rf $(INSTALL_LIB)$(NAME)
+	rm -rf $(INSTALL_LIB)$(NAME).0
+	rm -rf $(INSTALL_INCLUDE)
