@@ -70,7 +70,7 @@ static inline int _gshkl_add_var_to_loop(greshunkel_var *loop, const greshunkel_
 	return 0;
 }
 
-void filter_cleanup(char *result) {
+void gshkl_filter_cleanup(char *result) {
 	free(result);
 }
 
