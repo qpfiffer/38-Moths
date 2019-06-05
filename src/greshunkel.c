@@ -666,6 +666,7 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 			to_return.data = realloc(to_return.data, to_return.size);
 			memcpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
 			free(rendered_piece.data);
+			free(to_render_line.data);
 		}
 	} else if (regexec_2_0_beta(&all_regex->c_conditional_regex, buf, 3, match) == 0) {
 		const match_t conditional_variable = match[1];
@@ -764,6 +765,7 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 			to_return.data = realloc(to_return.data, to_return.size);
 			memcpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
 			free(rendered_piece.data);
+			free(to_render_line.data);
 		}
 	}
 
