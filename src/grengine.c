@@ -122,6 +122,13 @@ static void guess_mimetype(const char *ending, const size_t ending_siz, m38_http
 	strncpy(response->mimetype, type, sizeof(response->mimetype));
 }
 
+int m38_return_raw_buffer(const char *buf, const size_t buf_size, m38_http_response *response) {
+	response->outsize = buf_size;
+	response->out = (unsigned char *)buf;
+
+	return 200;
+}
+
 int m38_render_file(const struct greshunkel_ctext *ctext, const char *file_path, m38_http_response *response) {
 	int rc = m38_mmap_file(file_path, response);
 	if (!RESPONSE_OK(rc))

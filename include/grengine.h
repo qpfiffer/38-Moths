@@ -25,6 +25,15 @@ int m38_mmap_file(const char *file_path, m38_http_response *response);
  */
 int m38_render_file(const struct greshunkel_ctext *ctext, const char *file_path, m38_http_response *response);
 
+/* xXx FUNCTION=m38_return_raw_buffer xXx
+ * xXx DESCRIPTION=If you just want to return a raw string, use this. xXx
+ * xXx RETURNS=An HTTP status code. 200 on success, 404 on not found, etc. xXx
+ * xXx *buf=The string to send back to the client. xXx
+ * xXx buf=The length of the buffer, in bytes. xXx
+ * xXx *response=The <code>m38_http_response</code> object your handler was passed. xXx
+ */
+int m38_return_raw_buffer(const char *buf, const size_t buf_size, m38_http_response *response);
+
 /* xXx FUNCTION=m38_heap_cleanup xXx
  * xXx DESCRIPTION=Simple function that <code>free()</code>'s memory in <code>out</code>. xXx
  * xXx RETURNS=Nothing. xXx
