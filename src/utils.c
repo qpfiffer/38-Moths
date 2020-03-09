@@ -86,3 +86,35 @@ int hash_string_fnv1a(const unsigned char *key, const size_t siz, char outbuf[st
 	sprintf(outbuf, "%"PRIX64, hash);
 	return 1;
 }
+
+char *m38_get_cookie_value(const char *cookie_string, const size_t cookie_string_siz, const char *needle) {
+	/* TODO: Make sure this function handles bad input. */
+	if (!cookie_string)
+		return NULL;
+
+	const char *cookie_loc = strnstr(cookie_string, needle, cookie_string_siz);
+	if (!cookie_loc)
+		return NULL;
+
+	const char *cookie_string_start = cookie_loc;
+	const char *cookie_string_end = strnstr(cookie_loc, ";", cookie_string_siz - (cookie_loc - cookie_string));
+	if (!cookie_string_end) {
+		/* This is okay, it might be at the end of the cookie. */
+		cookie_string_end = strnstr(cookie_loc, " ", cookie_string_siz - (cookie_loc - cookie_string));
+		if (!cookie_string_end)
+			cookie_string_end = cookie_loc + cookie_string_siz;
+	}
+
+	const size_t cookie_string_size = cookie_string_end - cookie_string_start;
+	const char *cookie_string_value = strnstr(cookie_loc, "=", cookie_string_size);
+	if (!cookie_string_value)
+		return NULL;
+
+	/* -1 here is for the '=': */
+	const size_t cookie_string_value_size = cookie_string_end - (cookie_string_value - 1);
+	char *data = calloc(sizeof(char), cookie_string_value_size + 1);
+	data[cookie_string_size] = '\0';
+	strncpy(data, cookie_string_value + 1, cookie_string_value_size);
+
+	return data;
+}

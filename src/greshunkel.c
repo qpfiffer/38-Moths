@@ -692,7 +692,7 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 		strncpy(just_match_str, conditional_variable.start, conditional_variable.len);
 
 		/* TODO: Support a boolean type. */
-		/*if (!((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_BOOL)) { */
+		/*if (!((tuple = find_needle(ctext, just_match_str, 1)) && tuple->type == GSHKL_BOOL)) */
 		const greshunkel_tuple *tuple = NULL;
 		char *sub_ctext_match = NULL;
 		int should_render = 0;

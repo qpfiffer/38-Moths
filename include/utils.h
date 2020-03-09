@@ -64,3 +64,12 @@ size_t get_file_size(const char *file_path);
 * xXx outbuf[static HASH_STR_SIZE]=This buffer will be filled out with the hashed string. xXx
 */
 int hash_string_fnv1a(const unsigned char *string, const size_t siz, char outbuf[static HASH_STR_SIZE]);
+
+/* xXx FUNCTION=m38_get_cookie_value xXx
+* xXx DESCRIPTION=Gets a specific value out of a cookie, like the session ID. xXx
+* xXx RETURNS=NULL or the value of the specific cookie value. xXx
+* xXx *cookie_string=The cookie value itself, which can be retrieved with m38_get_cookie_value. xXx
+* xXx cookie_string_siz=The length of cookie_string. xXx
+* xXx needle=The value you're looking for inside the cookie, like `sessionid`. xXx
+*/
+char *m38_get_cookie_value(const char *cookie_string, const size_t cookie_string_siz, const char *needle);

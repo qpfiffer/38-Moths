@@ -98,6 +98,7 @@ m38_range_header m38_parse_range_header(const char *range_query) {
 }
 
 char *m38_get_header_value_raw(const char *request, const size_t request_siz, const char header[static 1]) {
+	/* TODO: Make sure this function handles bad input. */
 	char *data = NULL;
 	const char *header_loc = strnstr(request, header, request_siz);
 	if (!header_loc)
