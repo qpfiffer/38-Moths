@@ -149,7 +149,8 @@ int gshkl_add_int_to_loop(greshunkel_var *loop, const int value);
  * xXx *loop=The loop to add the context to. xXx
  * xXx *child=The pre-built child context. xXx
  */
-int gshkl_add_sub_context_to_loop(greshunkel_var *loop, const greshunkel_ctext *child);
+int gshkl_add_sub_context_to_loop(greshunkel_var *loop,
+		const greshunkel_ctext *child);
 
 /* Sub-context management */
 
@@ -160,7 +161,9 @@ int gshkl_add_sub_context_to_loop(greshunkel_var *loop, const greshunkel_ctext *
  * xXx name=The name of the child context. xXx
  * xXx *child=The pre-built child context. xXx
  */
-int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[WISDOM_OF_WORDS], const greshunkel_ctext *child);
+int gshkl_add_sub_context(greshunkel_ctext *parent,
+		const char name[WISDOM_OF_WORDS],
+		const greshunkel_ctext *child);
 
 /* Filters management */
 

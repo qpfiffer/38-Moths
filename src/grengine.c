@@ -287,20 +287,20 @@ static void log_request(const m38_http_request *request, const m38_http_response
 	free(user_agent);
 }
 
-static int read_max_bytes_from_socket(const int accept_fd, unsigned char *to_read, size_t *num_read) {
+static int read_max_bytes_from_socket(const int accept_fd, unsigned char **to_read, size_t *num_read) {
 	size_t read_this_time = 0;
-	while ((read_this_time = recv(accept_fd, to_read + *num_read, MAX_READ_LEN, 0))) {
+	while ((read_this_time = recv(accept_fd, *to_read + *num_read, MAX_READ_LEN, 0))) {
 		*num_read += read_this_time;
 		if (read_this_time == 0 || read_this_time < MAX_READ_LEN)
 			break;
 		read_this_time = 0;
 
-		to_read = realloc(to_read, *num_read + MAX_READ_LEN);
-		if (!to_read) {
+		*to_read = realloc(*to_read, *num_read + MAX_READ_LEN);
+		if (!(*to_read)) {
 			m38_log_msg(LOG_ERR, "Ran out of memory reading request.");
 			goto error;
 		}
-		memset(to_read + *num_read, '\0', MAX_READ_LEN);
+		memset(*to_read + *num_read, '\0', MAX_READ_LEN);
 	}
 
 	return 0;
@@ -329,7 +329,7 @@ static int attempt_reread_from_socket(
 		/* ------------------------------------- */
 		/* XXX: Do a select here with a timeout. */
 		/* ------------------------------------- */
-		int rc = read_max_bytes_from_socket(accept_fd, to_read, &num_read);
+		int rc = read_max_bytes_from_socket(accept_fd, &to_read, &num_read);
 		if (rc != 0)
 			goto error;
 	}
@@ -358,7 +358,7 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_route 
 	size_t num_read = 0;
 	int rc = 0;
 
-	rc = read_max_bytes_from_socket(accept_fd, to_read, &num_read);
+	rc = read_max_bytes_from_socket(accept_fd, &to_read, &num_read);
 	if (rc != 0)
 		goto error;
 
