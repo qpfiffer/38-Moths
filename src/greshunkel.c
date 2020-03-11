@@ -378,14 +378,13 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 }
 
 static line
-_interpolate_line(const greshunkel_ctext *ctext, const line current_line, const struct compiled_regex *all_regex) {
+_interpolate_line_subcontext(const greshunkel_ctext *ctext, const line current_line, const struct compiled_regex *all_regex) {
+	/* Matches context-based variables, which are dictionary-like. */
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
 	const line *operating_line = &current_line;
-	assert(operating_line->data != NULL);
 
 	match_t cvar_match[3];
-	/* We're using different variables here. */
 	while (regexec_2_0_beta(&all_regex->c_cvar_regex, operating_line->data, 3, cvar_match) == 0) {
 		const match_t inner_match = cvar_match[1];
 		const match_t subname_match = cvar_match[2];
@@ -448,6 +447,19 @@ done:
 		memset(cvar_match, 0, sizeof(cvar_match));
 	}
 
+	return (*operating_line);
+}
+
+static line
+_interpolate_line(const greshunkel_ctext *ctext, const line current_line, const struct compiled_regex *all_regex) {
+	line interpolated_line = {0};
+	line new_line_to_add = {0};
+
+	/* Do context variables first: */
+	const line _operating_line = _interpolate_line_subcontext(ctext, current_line, all_regex);
+	const line *operating_line = &_operating_line;
+	assert(operating_line->data != NULL);
+
 	match_t match[2];
 	while (regexec_2_0_beta(&all_regex->c_var_regex, operating_line->data, 2, match) == 0) {
 		const match_t inner_match = match[1];
@@ -479,6 +491,14 @@ done:
 		/* Set the next regex check after this one. */
 		memset(match, 0, sizeof(match));
 	}
+
+	/* SCREAM */
+	//match_t include_match[2] = {0};
+	//while (regexec_2_0_beta(&all_regex->c_include_regex, operating_line->data, 2, include_match) == 0) {
+	//	line filtered_line = _filter_line(ctext, operating_line, all_regex);
+	//	if (filtered_line.data != interpolated_line.data && interpolated_line.data != NULL)
+	//		free(operating_line->data);
+	//}
 
 	line filtered_line = _filter_line(ctext, operating_line, all_regex);
 	if (filtered_line.data != interpolated_line.data && interpolated_line.data != NULL)

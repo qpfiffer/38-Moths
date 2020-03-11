@@ -333,7 +333,7 @@ int test_variable_interpolation() {
 	gshkl_free_context(ctext);
 
 	int ret = strcmp(a_rendered, b_rendered);
-	if (ret) {
+	if (!ret) {
 		free(a_rendered);
 		free(b_rendered);
 		return 1;
@@ -341,6 +341,33 @@ int test_variable_interpolation() {
 
 	free(a_rendered);
 	free(b_rendered);
+
+	return 0;
+}
+
+int test_subcontext_interpolation() {
+	size_t new_size = 0;
+	const char document[] = 
+		"xXx @image.name xXx\n"
+		"xXx @image.id xXx";
+	const char document_correct[] = "test_name\n1";
+
+	greshunkel_ctext *ctext = gshkl_init_context();
+	greshunkel_ctext *sub = gshkl_init_context();
+	gshkl_add_string(sub, "name", "test_name");
+	gshkl_add_int(sub, "id", 1);
+	gshkl_add_sub_context(ctext, "image", sub);
+
+	char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
+	gshkl_free_context(ctext);
+
+	int ret = strcmp(rendered, document_correct);
+	if (ret) {
+		free(rendered);
+		return 1;
+	}
+
+	free(rendered);
 
 	return 0;
 }
@@ -358,6 +385,7 @@ int main(int argc, char *argv[]) {
 	run_test(test_filters);
 	run_test(test_template_include);
 	run_test(test_variable_interpolation);
+	run_test(test_subcontext_interpolation);
 	run_test(test_unless);
 	run_test(test_big_test);
 
