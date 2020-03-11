@@ -37,11 +37,11 @@ typedef struct _match {
 
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
 static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]+) xXx";
-static const char loop_regex[] = "^\\s+xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
+static const char loop_regex[] = "^\\s*xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
-static const char include_regex[] = "^\\s+xXx SCREAM ([a-zA-Z_]+) xXx";
-static const char conditional_regex[] = "^\\s+xXx UNLESS @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
-static const char conditional_inverse_regex[] = "^\\s+xXx UNLESS NOT @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
+static const char include_regex[] = "^\\s*xXx SCREAM ([a-zA-Z_]+) xXx";
+static const char conditional_regex[] = "^\\s*xXx UNLESS @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
+static const char conditional_inverse_regex[] = "^\\s*xXx UNLESS NOT @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
 
 greshunkel_ctext *gshkl_init_context() {
 	greshunkel_ctext *ctext = calloc(1, sizeof(struct greshunkel_ctext));
@@ -588,6 +588,10 @@ static inline int _is_falsey(const greshunkel_tuple *tuple) {
 static inline int _is_truthy(const greshunkel_tuple *tuple) {
 	const int is_string = tuple->type == GSHKL_STR ? 1 : 0;
 	const int is_null = tuple->value.arr == NULL || strnlen(tuple->value.str, MAX_GSHKL_STR_SIZE) == 0 ? 1 : 0;
+	if (!is_null) {
+		const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
+		return is_string && !says_false;
+	}
 	return is_string && !is_null;
 }
 
@@ -663,9 +667,15 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;
-			to_return.data = realloc(to_return.data, to_return.size);
+			if (old_size <= 0) {
+				to_return.data = calloc(1, to_return.size);
+			} else {
+				to_return.data = realloc(to_return.data, to_return.size);
+			}
+
 			memcpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
-			free(rendered_piece.data);
+			if (rendered_piece.data != to_render_line.data)
+				free(rendered_piece.data);
 			free(to_render_line.data);
 		}
 	} else if (regexec_2_0_beta(&all_regex->c_conditional_regex, buf, 3, match) == 0) {
@@ -762,9 +772,15 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;
-			to_return.data = realloc(to_return.data, to_return.size);
+			if (old_size <= 0) {
+				to_return.data = calloc(1, to_return.size);
+			} else {
+				to_return.data = realloc(to_return.data, to_return.size);
+			}
+
 			memcpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
-			free(rendered_piece.data);
+			if (rendered_piece.data != to_render_line.data)
+				free(rendered_piece.data);
 			free(to_render_line.data);
 		}
 	}
