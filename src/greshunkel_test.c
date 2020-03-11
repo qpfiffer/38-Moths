@@ -76,12 +76,12 @@ int test_template_include() {
 	const char document_correct[] = 
 "<p>This is a test include file with it's own context and strings and stuff.</p>\n"
 "\n"
-"    <li>This is a test. a</li>\n\n"
-"    <li>This is a test. b</li>\n\n"
-"    <li>This is a test. c</li>\n\n"
-"    <li>This is a test. 1</li>\n\n"
-"    <li>This is a test. 2</li>\n\n"
-"    <li>This is a test. 3</li>\n\n";
+"    <li>This is a test. a</li>\n"
+"    <li>This is a test. b</li>\n"
+"    <li>This is a test. c</li>\n"
+"    <li>This is a test. 1</li>\n"
+"    <li>This is a test. 2</li>\n"
+"    <li>This is a test. 3</li>";
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "TEST", "This is a test.");
@@ -111,7 +111,7 @@ int test_template_include() {
 
 int test_filters() {
 	size_t new_size = 0;
-	const char document[] = "<li>XxX return_z xXx @ONE xXx XxX</li>";
+	const char document[] = "<li>XxX return_z xXx @ONE xXx XxX XxX return_z XxX</li>";
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_int(ctext, "ONE", 1);
@@ -120,7 +120,7 @@ int test_filters() {
 	char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
 	gshkl_free_context(ctext);
 
-	int ret = strcmp(rendered, "<li>z</li>");
+	int ret = strcmp(rendered, "<li>z z</li>");
 	if (ret) {
 		free(rendered);
 		return 1;
@@ -198,7 +198,14 @@ int test_big_test() {
 	const char document_correct[] = 
 "<html>\n"
 "	<body>\n"
-"		xXx SCREAM _include.html xXx\n"
+"<p>This is a test include file with it's own context and strings and stuff.</p>\n"
+"\n"
+"    <li>This is a test. a</li>\n"
+"    <li>This is a test. b</li>\n"
+"    <li>This is a test. c</li>\n"
+"    <li>This is a test. 1</li>\n"
+"    <li>This is a test. 2</li>\n"
+"    <li>This is a test. 3</li>"
 "\n"
 "			<li>This is a test. a</li>\n"
 "		\n"

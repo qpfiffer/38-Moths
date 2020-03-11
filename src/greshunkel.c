@@ -15,6 +15,7 @@ struct compiled_regex {
 	regex_t c_cvar_regex;
 	regex_t c_loop_regex;
 	regex_t c_filter_regex;
+	regex_t c_filter_no_args_regex;
 	regex_t c_include_regex;
 	regex_t c_conditional_regex;
 	regex_t c_conditional_inverse_regex;
@@ -38,7 +39,8 @@ typedef struct _match {
 static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
 static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]+) xXx";
 static const char loop_regex[] = "^\\s*xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
-static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
+static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+)\\s+(.*) XxX";
+static const char filter_regex_no_args[] = "XxX ([a-zA-Z_0-9]+)\\s+(.*) XxX";
 static const char include_regex[] = "^\\s*xXx SCREAM ([a-zA-Z_.]+) xXx";
 static const char conditional_regex[] = "^\\s*xXx UNLESS @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
 static const char conditional_inverse_regex[] = "^\\s*xXx UNLESS NOT @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
@@ -320,21 +322,15 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 	/* Now we match template filters: */
 	match_t filter_matches[3];
 
-	/* TODO: More than one filter per line. */
 	while (regexec_2_0_beta(&all_regex->c_filter_regex, operating_line->data, 3, filter_matches) == 0) {
 		match_t whole_match = filter_matches[0];
-		const char *first_XxX = strstr(whole_match.start, " XxX");
-		const char *end_of_first_XxX = first_XxX + strlen(" XxX");
+		const char *start_of_first_XxX = strstr(whole_match.start, " XxX");
+		const char *end_of_first_XxX = start_of_first_XxX + strlen(" XxX");
 		const size_t full_diff = end_of_first_XxX - whole_match.start;
-		(void)full_diff;
 
-		//whole_match.rm_eo - full_diff;
 		whole_match.rm_eo = (whole_match.start + full_diff) - operating_line->data;
 		whole_match.len = full_diff;
-		/* Because we can't do non-greedy regex with POSIX, we have to fuck around
-		 * with this kind of garbage.
-		 */
-		assert(first_XxX != NULL);
+		assert(start_of_first_XxX != NULL);
 
 		const match_t function_name = filter_matches[1];
 		const match_t argument = filter_matches[2];
@@ -346,7 +342,7 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 
 		if ((filter = find_needle(ctext, just_match_str, 0))) {
 
-			const size_t new_len = first_XxX - argument.start;
+			const size_t new_len = start_of_first_XxX - argument.start;
 
 			/* Render the argument out so we can pass it to the filter function. */
 			char *rendered_argument = strndup(argument.start, new_len);
@@ -371,6 +367,44 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 		operating_line = &interpolated_line;
 
 		/* Set the next regex check after this one. */
+		memset(filter_matches, 0, sizeof(filter_matches));
+	}
+
+	/* No arguments matching. */
+	while (regexec_2_0_beta(&all_regex->c_filter_no_args_regex, operating_line->data, 2, filter_matches) == 0) {
+		match_t whole_match = filter_matches[0];
+		const char *start_of_first_XxX = strstr(whole_match.start, " XxX");
+		const char *end_of_first_XxX = start_of_first_XxX + strlen(" XxX");
+		const size_t full_diff = end_of_first_XxX - whole_match.start;
+
+		whole_match.rm_eo = (whole_match.start + full_diff) - operating_line->data;
+		whole_match.len = full_diff;
+		assert(start_of_first_XxX != NULL);
+
+		const match_t function_name = filter_matches[1];
+
+		const greshunkel_filter *filter;
+		char just_match_str[function_name.len + 1];
+		just_match_str[function_name.len] = '\0';
+		strncpy(just_match_str, function_name.start, function_name.len);
+
+		if ((filter = find_needle(ctext, just_match_str, 0))) {
+			char *filter_result = filter->filter_func(NULL);
+
+			vishnu(&new_line_to_add, whole_match, filter_result, operating_line);
+
+			if (filter->clean_up != NULL)
+				filter->clean_up(filter_result);
+		}
+		assert(filter != NULL);
+
+		free(interpolated_line.data);
+		interpolated_line.size = new_line_to_add.size;
+		interpolated_line.data = new_line_to_add.data;
+		new_line_to_add.size = 0;
+		new_line_to_add.data = NULL;
+		operating_line = &interpolated_line;
+
 		memset(filter_matches, 0, sizeof(filter_matches));
 	}
 
@@ -451,6 +485,54 @@ done:
 }
 
 static line
+_include_line(const greshunkel_ctext *ctext, const line *current_line, const struct compiled_regex *all_regex) {
+	line interpolated_line = {0};
+	const line *operating_line = current_line;
+	assert(operating_line->data != NULL);
+
+	match_t match[2] = {0};
+	while (regexec_2_0_beta(&all_regex->c_include_regex, operating_line->data, 2, match) == 0) {
+		const match_t inner_match = match[1];
+		assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
+
+		/* Copy the string here so we only get the match, not everything after it. */
+		char just_match_str[inner_match.len + 1];
+		just_match_str[inner_match.len] = '\0';
+		strncpy(just_match_str, inner_match.start, inner_match.len);
+
+
+		/* Open the file here. */
+		/* TODO: Make this actually the whole size of the file, not just a random buffer. */
+		char template_file[2048] = {0};
+		size_t template_file_siz = 0;
+		FILE *include_file = fopen(just_match_str, "r");
+		if (!include_file) {
+			/* If we couldn't open the file, blow up with an assertion. */
+			printf("Could not open SCREAM file for reading.\n");
+			printf("Line: %s\n", operating_line->data);
+			assert(1 == 0);
+		}
+
+		template_file_siz = fread(template_file, 1, sizeof(template_file), include_file);
+		fclose(include_file);
+		template_file[template_file_siz] = '\0';
+
+		line rendered_piece = {0};
+		rendered_piece.data = gshkl_render(ctext, template_file, template_file_siz, &rendered_piece.size);
+
+		free(interpolated_line.data);
+		interpolated_line.size = rendered_piece.size;
+		interpolated_line.data = rendered_piece.data;
+		operating_line = &interpolated_line;
+
+		/* Set the next regex check after this one. */
+		memset(match, 0, sizeof(match));
+	}
+
+	return *operating_line;
+}
+
+static line
 _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const struct compiled_regex *all_regex) {
 	line interpolated_line = {0};
 	line new_line_to_add = {0};
@@ -460,7 +542,7 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 	const line *operating_line = &_operating_line;
 	assert(operating_line->data != NULL);
 
-	match_t match[2];
+	match_t match[2] = {0};
 	while (regexec_2_0_beta(&all_regex->c_var_regex, operating_line->data, 2, match) == 0) {
 		const match_t inner_match = match[1];
 		assert(inner_match.rm_so != -1 && inner_match.rm_eo != -1);
@@ -492,15 +574,12 @@ _interpolate_line(const greshunkel_ctext *ctext, const line current_line, const 
 		memset(match, 0, sizeof(match));
 	}
 
-	/* SCREAM */
-	//match_t include_match[2] = {0};
-	//while (regexec_2_0_beta(&all_regex->c_include_regex, operating_line->data, 2, include_match) == 0) {
-	//	line filtered_line = _filter_line(ctext, operating_line, all_regex);
-	//	if (filtered_line.data != interpolated_line.data && interpolated_line.data != NULL)
-	//		free(operating_line->data);
-	//}
+	/* SCREAM includes */
+	line included_line = _include_line(ctext, operating_line, all_regex);
+	if (included_line.data != interpolated_line.data && interpolated_line.data != NULL)
+		free(operating_line->data);
 
-	line filtered_line = _filter_line(ctext, operating_line, all_regex);
+	line filtered_line = _filter_line(ctext, &included_line, all_regex);
 	if (filtered_line.data != interpolated_line.data && interpolated_line.data != NULL)
 		free(operating_line->data);
 
@@ -820,6 +899,9 @@ static inline void _compile_regex(struct compiled_regex *all_regex) {
 	reti = regcomp(&all_regex->c_filter_regex, filter_regex, REG_EXTENDED);
 	assert(reti == 0);
 
+	reti = regcomp(&all_regex->c_filter_no_args_regex, filter_regex_no_args, REG_EXTENDED);
+	assert(reti == 0);
+
 	reti = regcomp(&all_regex->c_include_regex, include_regex, REG_EXTENDED);
 	assert(reti == 0);
 
@@ -835,6 +917,7 @@ static inline void _destroy_regex(struct compiled_regex *all_regex) {
 	regfree(&all_regex->c_cvar_regex);
 	regfree(&all_regex->c_loop_regex);
 	regfree(&all_regex->c_filter_regex);
+	regfree(&all_regex->c_filter_no_args_regex);
 	regfree(&all_regex->c_include_regex);
 	regfree(&all_regex->c_conditional_regex);
 	regfree(&all_regex->c_conditional_inverse_regex);
