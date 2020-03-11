@@ -41,7 +41,7 @@ static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]
 static const char loop_regex[] = "^\\s*xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+)\\s+(.*) XxX";
 static const char filter_regex_no_args[] = "XxX ([a-zA-Z_0-9]+) XxX";
-static const char include_regex[] = "^\\s*xXx SCREAM ([a-zA-Z_.]+) xXx";
+static const char include_regex[] = "^\\s*xXx SCREAM ([a-zA-Z_./]+) xXx";
 static const char conditional_regex[] = "^\\s*xXx UNLESS @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
 static const char conditional_inverse_regex[] = "^\\s*xXx UNLESS NOT @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
 
@@ -684,12 +684,13 @@ static inline int _is_falsey(const greshunkel_tuple *tuple) {
 
 static inline int _is_truthy(const greshunkel_tuple *tuple) {
 	const int is_string = tuple->type == GSHKL_STR ? 1 : 0;
+	const int is_subcontext = tuple->type == GSHKL_SUBCTEXT ? 1 : 0;
 	const int is_null = tuple->value.arr == NULL || strnlen(tuple->value.str, MAX_GSHKL_STR_SIZE) == 0 ? 1 : 0;
 	if (!is_null) {
 		const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
-		return is_string && !says_false;
+		return (is_string || is_subcontext) && !says_false;
 	}
-	return is_string && !is_null;
+	return (is_string || is_subcontext) && !is_null;
 }
 
 static line
