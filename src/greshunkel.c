@@ -688,7 +688,7 @@ static inline int _is_truthy(const greshunkel_tuple *tuple) {
 	const int is_null = tuple->value.arr == NULL || strnlen(tuple->value.str, MAX_GSHKL_STR_SIZE) == 0 ? 1 : 0;
 	if (!is_null) {
 		const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
-		return is_string && !says_false;
+		return (is_string || is_subcontext) && !says_false;
 	}
 	return (is_string || is_subcontext) && !is_null;
 }
