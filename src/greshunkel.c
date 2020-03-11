@@ -39,7 +39,7 @@ static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
 static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]+) xXx";
 static const char loop_regex[] = "^\\s*xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+) (.*) XxX";
-static const char include_regex[] = "^\\s*xXx SCREAM ([a-zA-Z_]+) xXx";
+static const char include_regex[] = "^\\s*xXx SCREAM ([a-zA-Z_.]+) xXx";
 static const char conditional_regex[] = "^\\s*xXx UNLESS @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
 static const char conditional_inverse_regex[] = "^\\s*xXx UNLESS NOT @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
 
@@ -543,23 +543,21 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 		for (j = 0; j < cur_vector_p->count; j++) {
 			const greshunkel_tuple *current_loop_var = vector_get(cur_vector_p, j);
 			line rendered_piece = {0};
+
+			/* Recurse contexts until my fucking mind melts. */
+			greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
 			if (current_loop_var->type == GSHKL_STR) {
-				/* Recurse contexts until my fucking mind melts. */
-				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
 				gshkl_add_string(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.str);
-				rendered_piece.data = gshkl_render(_temp_ctext, to_render_line.data, to_render_line.size, &rendered_piece.size);
-				gshkl_free_context(_temp_ctext);
 			} else if (current_loop_var->type == GSHKL_SUBCTEXT) {
-				/* Recurse contexts until my fucking mind melts. */
-				greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
 				gshkl_add_sub_context(_temp_ctext, loop_variable_name_rendered, current_loop_var->value.sub_ctext);
-				rendered_piece.data = gshkl_render(_temp_ctext, to_render_line.data, to_render_line.size, &rendered_piece.size);
-				gshkl_free_context(_temp_ctext);
 			} else {
 				printf("Weird type given during loop interpolation.");
 				printf("Line: %s\n", buf);
 				assert(1 == 0);
 			}
+
+			rendered_piece.data = gshkl_render(_temp_ctext, to_render_line.data, to_render_line.size, &rendered_piece.size);
+			gshkl_free_context(_temp_ctext);
 
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;

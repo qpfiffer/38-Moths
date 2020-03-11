@@ -73,6 +73,15 @@ int test_unless() {
 int test_template_include() {
 	size_t new_size = 0;
 	const char document[] = "xXx SCREAM _include.html xXx";
+	const char document_correct[] = 
+"<p>This is a test include file with it's own context and strings and stuff.</p>\n"
+"\n"
+"    <li>This is a test. a</li>\n\n"
+"    <li>This is a test. b</li>\n\n"
+"    <li>This is a test. c</li>\n\n"
+"    <li>This is a test. 1</li>\n\n"
+"    <li>This is a test. 2</li>\n\n"
+"    <li>This is a test. 3</li>\n\n";
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "TEST", "This is a test.");
@@ -88,6 +97,12 @@ int test_template_include() {
 
 	char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
 	gshkl_free_context(ctext);
+
+	int ret = strcmp(rendered, document_correct);
+	if (ret) {
+		free(rendered);
+		return 1;
+	}
 
 	free(rendered);
 
@@ -184,7 +199,7 @@ int test_big_test() {
 "<html>\n"
 "	<body>\n"
 "		xXx SCREAM _include.html xXx\n"
-"		\n"
+"\n"
 "			<li>This is a test. a</li>\n"
 "		\n"
 "			<li>This is a test. b</li>\n"
@@ -201,7 +216,7 @@ int test_big_test() {
 "		<p>This is a regular string: This is a test.</p>\n"
 "		<p>This is an integer: 666</p>\n"
 "		<ul>\n"
-"		\n"
+"\n"
 "			<li>z</li>\n"
 "		\n"
 "			<li>z</li>\n"
@@ -217,29 +232,29 @@ int test_big_test() {
 "		</ul>\n"
 "		<p>Context Interpolation:</p>\n"
 "		<p>test_name - other_value</p>\n"
-"		\n"
+"\n"
 "		<p>You should see this. ctext interp.</p>\n"
 "		\n"
 "		<p>HELLO!</p>\n"
-"		\n"
+"\n"
 "			<p>FILTERS IN FILTERS IN LOOPS: z</p>\n"
 "			<p>HELLO!</p>\n"
 "			<p>I AM IN A LOOP! - 0</p>\n"
-"		\n"
+"\n"
 "		<p>You should see this. ctext interp.</p>\n"
 "		\n"
 "		\n"
 "			<p>FILTERS IN FILTERS IN LOOPS: z</p>\n"
 "			<p>HELLO!</p>\n"
 "			<p>I AM IN A LOOP! - 1</p>\n"
-"		\n"
+"\n"
 "		<p>You should see this. ctext interp.</p>\n"
 "		\n"
 "		\n"
 "			<p>FILTERS IN FILTERS IN LOOPS: z</p>\n"
 "			<p>HELLO!</p>\n"
 "			<p>I AM IN A LOOP! - 2</p>\n"
-"		\n"
+"\n"
 "		<p>You should see this. ctext interp.</p>\n"
 "		\n"
 "		\n"
