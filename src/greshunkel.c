@@ -40,7 +40,7 @@ static const char variable_regex[] = "xXx @([a-zA-Z_0-9]+) xXx";
 static const char ctext_variable_regex[] = "xXx @([a-zA-Z_0-9]+)\\.([a-zA-Z_0-9]+) xXx";
 static const char loop_regex[] = "^\\s*xXx LOOP ([a-zA-Z_]+) ([a-zA-Z_]+) xXx(.*)xXx BBL xXx";
 static const char filter_regex[] = "XxX ([a-zA-Z_0-9]+)\\s+(.*) XxX";
-static const char filter_regex_no_args[] = "XxX ([a-zA-Z_0-9]+)\\s+(.*) XxX";
+static const char filter_regex_no_args[] = "XxX ([a-zA-Z_0-9]+) XxX";
 static const char include_regex[] = "^\\s*xXx SCREAM ([a-zA-Z_.]+) xXx";
 static const char conditional_regex[] = "^\\s*xXx UNLESS @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
 static const char conditional_inverse_regex[] = "^\\s*xXx UNLESS NOT @([a-zA-Z_.]+) xXx(.*)xXx ENDLESS xXx";
@@ -321,7 +321,6 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 
 	/* Now we match template filters: */
 	match_t filter_matches[3];
-
 	while (regexec_2_0_beta(&all_regex->c_filter_regex, operating_line->data, 3, filter_matches) == 0) {
 		match_t whole_match = filter_matches[0];
 		const char *start_of_first_XxX = strstr(whole_match.start, " XxX");
@@ -371,8 +370,9 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 	}
 
 	/* No arguments matching. */
-	while (regexec_2_0_beta(&all_regex->c_filter_no_args_regex, operating_line->data, 2, filter_matches) == 0) {
-		match_t whole_match = filter_matches[0];
+	match_t filter_matches_no_args[2];
+	while (regexec_2_0_beta(&all_regex->c_filter_no_args_regex, operating_line->data, 2, filter_matches_no_args) == 0) {
+		match_t whole_match = filter_matches_no_args[0];
 		const char *start_of_first_XxX = strstr(whole_match.start, " XxX");
 		const char *end_of_first_XxX = start_of_first_XxX + strlen(" XxX");
 		const size_t full_diff = end_of_first_XxX - whole_match.start;
@@ -381,7 +381,7 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 		whole_match.len = full_diff;
 		assert(start_of_first_XxX != NULL);
 
-		const match_t function_name = filter_matches[1];
+		const match_t function_name = filter_matches_no_args[1];
 
 		const greshunkel_filter *filter;
 		char just_match_str[function_name.len + 1];
@@ -405,7 +405,7 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 		new_line_to_add.data = NULL;
 		operating_line = &interpolated_line;
 
-		memset(filter_matches, 0, sizeof(filter_matches));
+		memset(filter_matches_no_args, 0, sizeof(filter_matches));
 	}
 
 	return *operating_line;
