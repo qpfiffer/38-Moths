@@ -499,7 +499,9 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_route 
 			snprintf(buf, actual_response_siz, "%s: %s\r\n", (*pair)->header, (*pair)->value);
 			strncat(actual_response, buf, siz);
 		}
-		strncat(actual_response, r_final, strlen(r_final));
+
+		memcpy(actual_response, r_final, strlen(r_final));
+		actual_response[strlen(r_final)] = '\0';
 
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out, response.outsize);
@@ -533,7 +535,10 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_route 
 			response.mimetype, max_size,
 			start_byte, end_byte, max_size);
 		m38_log_msg(LOG_INFO, "Sending back: Content-Range: %zu-%zu/%zu", start_byte, end_byte, max_size);
-		strncat(actual_response, r_final, strlen(r_final));
+
+		memcpy(actual_response, r_final, strlen(r_final));
+		actual_response[strlen(r_final)] = '\0';
+
 		/* memcpy the rest because it could be anything: */
 		memcpy(actual_response + header_size, response.out + start_byte, end_byte - start_byte);
 	}
