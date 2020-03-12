@@ -111,9 +111,9 @@ char *m38_get_cookie_value(const char *cookie_string, const size_t cookie_string
 		return NULL;
 
 	/* -1 here is for the '=': */
-	const size_t cookie_string_value_size = cookie_string_end - (cookie_string_value - 1);
-	char *data = calloc(sizeof(char), cookie_string_value_size + 2);
-	data[cookie_string_size] = '\0';
+	const size_t cookie_string_value_size = cookie_string_end - cookie_string_value;
+	char *data = calloc(sizeof(char), cookie_string_value_size + 2); /* Plus two here: One for =, one for NULL */
+	data[cookie_string_value_size] = '\0';
 	strncpy(data, cookie_string_value + 1, cookie_string_value_size);
 
 	return data;
