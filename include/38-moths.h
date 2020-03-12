@@ -7,7 +7,6 @@
 #define VERSION "0.2"
 
 #include "logging.h"
-#include "simple_sparsehash.h"
 #include "cookie.h"
 #include "utils.h"
 #include "vector.h"

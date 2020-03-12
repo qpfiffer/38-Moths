@@ -473,7 +473,8 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_route 
 	if (response_code == 200 || response_code == 404 || response_code == 301 || response_code == 302) {
 		const size_t integer_length = UINT_LEN(response.outsize);
 		if (response.mimetype[0] == '\0')
-			strncpy(response.mimetype, "text/html", strlen("text/html"));
+			memcpy(response.mimetype, "text/html", strlen("text/html"));
+
 		header_size = strlen(response.mimetype) + strlen(matched_response->message)
 			+ integer_length - strlen("%s") - strlen("%zu") + strlen(r_final);
 
