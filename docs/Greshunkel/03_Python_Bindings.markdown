@@ -60,9 +60,6 @@ def main():
     })
     template = Template(test_template)
     print(template.render(context))
-
-if __name__ == '__main__':
-    main()
 ```
 
 The main idea is that you define a `Context()`, a `Template()` and add whatever
