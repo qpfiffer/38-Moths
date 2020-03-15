@@ -52,7 +52,7 @@ static const char r_206[] =
 	"Content-Range: bytes %zu-%zu/%zu\r\n"
 	"Connection: close\r\n";
 
-static const char r_final[] = "Server: waifu.xyz/bitch\r\n\r\n";
+static const char r_final[] = "Server: 38-Moths\r\n\r\n";
 
 /* internal struct, for mimetype guesses */
 struct {
