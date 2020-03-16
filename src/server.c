@@ -219,21 +219,18 @@ error:
 	return -1;
 }
 
-int m38_http_serve(int *main_sock_fd,
-		const int port,
-		const int num_threads,
-		const m38_route *routes,
-		const size_t num_routes) {
+int m38_http_serve(m38_app *app) {
 	mqd_t po_accepted_queue = -1;
 	mqd_t po_handled_queue = -1;
 	/* Handlers take accepted sockets and turn them into responses: */
-	pthread_t handlers[num_threads];
+	pthread_t handlers[app->num_threads];
 	/* The responder is responsible for sending bytes back over the wire: */
 	pthread_t responder_worker;
 	/* The acceptor listens and accepts new connections, and enqueues them: */
 	pthread_t acceptor_enqueuer;
 
-	*main_sock_fd = create_socket(port);
+	int *main_sock_fd = app->main_sock_fd;
+	*main_sock_fd = create_socket(app->port);
 	if (*main_sock_fd < 0)
 		goto error;
 
@@ -282,10 +279,10 @@ int m38_http_serve(int *main_sock_fd,
 	m38_log_msg(LOG_INFO, "Responder thread started.");
 
 	int i;
-	for (i = 0; i < num_threads; i++) {
+	for (i = 0; i < app->num_threads; i++) {
 		handler_arg args = {
-			.all_routes = routes,
-			.num_routes = num_routes,
+			.all_routes = app->routes,
+			.num_routes = app->num_routes,
 			.worker_ident = i
 		};
 		if (pthread_create(&handlers[i], NULL, handler, &args) != 0) {
@@ -304,7 +301,7 @@ int m38_http_serve(int *main_sock_fd,
 		goto error;
 	}
 
-	for (i = 0; i < num_threads; i++) {
+	for (i = 0; i < app->num_threads; i++) {
 		pthread_join(handlers[i], NULL);
 		m38_log_msg(LOG_INFO, "Worker thread %i stopped.", i);
 	}
