@@ -19,6 +19,7 @@
 #include "utils.h"
 #include "logging.h"
 #include "vector.h"
+#include "types.h"
 
 static const char r_200[] =
 	"HTTP/1.1 200 OK\r\n"
@@ -343,7 +344,7 @@ error:
 	return -1;
 }
 
-m38_handled_request *m38_generate_response(const int accept_fd, const m38_route *all_routes, const size_t route_num_elements) {
+m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *app) {
 	/* TODO: Malloc here */
 	unsigned char *to_read = calloc(1, MAX_READ_LEN);
 	char *actual_response = NULL;
@@ -406,9 +407,9 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_route 
 	}
 
 	/* Find our matching route: */
-	unsigned int i;
-	for (i = 0; i < route_num_elements; i++) {
-		const m38_route *cur_route = &all_routes[i];
+	int64_t i;
+	for (i = 0; i < app->num_routes; i++) {
+		const m38_route *cur_route = &app->routes[i];
 		if (strcmp(cur_route->verb, request.verb) != 0)
 			continue;
 
@@ -428,21 +429,33 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_route 
 			reti = regexec(&regex, request.resource, 0, NULL, 0);
 		regfree(&regex);
 		if (reti == 0) {
-			matching_route = &all_routes[i];
+			matching_route = &app->routes[i];
 			break;
 		}
 	}
 
 	/* If we didn't find one just use the 404 route: */
-	if (matching_route == NULL)
+	int64_t response_code = 0;
+	if (matching_route == NULL) {
 		matching_route = &r_404_route;
-
-	/* Run the handler through with the data we have: */
-	m38_log_msg(LOG_INFO, "Calling handler for %s.", matching_route->name);
-	int response_code = matching_route->handler(&request, &response);
+		if (app->r_404_handler) {
+			response_code = app->r_404_handler(&request, &response);
+		} else {
+			m38_log_msg(LOG_INFO, "Calling internal 404 handler for %s.", matching_route->name);
+			response_code = matching_route->handler(&request, &response);
+		}
+	} else {
+		/* Run the handler through with the data we have: */
+		m38_log_msg(LOG_INFO, "Calling handler for %s.", matching_route->name);
+		response_code = matching_route->handler(&request, &response);
+	}
 
 	if (response_code == 404 && (response.outsize == 0 || response.out == NULL)) {
-		response_code = r_404_handler(&request, &response);
+		if (app->r_404_handler) {
+			response_code = app->r_404_handler(&request, &response);
+		} else {
+			response_code = r_404_handler(&request, &response);
+		}
 	}
 
 	/* Embed the handler's text into the header: */
@@ -458,7 +471,7 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_route 
 	/* Figure out what header we need to use: */
 	const code_to_message *matched_response = NULL;
 	const code_to_message *response_headers = get_response_headers();
-	const unsigned int num_elements = get_response_headers_num_elements();
+	const int64_t num_elements = get_response_headers_num_elements();
 	for (i = 0; i < num_elements; i++) {
 		code_to_message current_response = response_headers[i];
 		if (current_response.code == response_code) {

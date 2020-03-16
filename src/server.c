@@ -36,8 +36,7 @@ typedef struct {
 } acceptor_arg;
 
 typedef struct {
-	const m38_route *all_routes;
-	const size_t num_routes;
+	const m38_app *app;
 	const int worker_ident;
 } handler_arg;
 
@@ -132,8 +131,7 @@ static void *handler(void *arg) {
 	mqd_t accepted_socket_queue = -1;
 	mqd_t handled_queue = -1;
 	const handler_arg *args = arg;
-	const size_t num_routes = args->num_routes;
-	const m38_route *all_routes = args->all_routes;
+	const m38_app *app = args->app;
 	const int worker_ident = args->worker_ident;
 
 	accepted_socket_queue = mq_open(ACCEPTED_SOCKET_QUEUE_NAME, O_RDONLY);
@@ -162,7 +160,7 @@ static void *handler(void *arg) {
 			break;
 		} else {
 			m38_log_msg(LOG_FUN, "Worker %i: Handling response.", worker_ident);
-			m38_handled_request *req = m38_generate_response(new_fd, all_routes, num_routes);
+			m38_handled_request *req = m38_generate_response(new_fd, app);
 
 			ssize_t msg_size = mq_send(handled_queue, (char *)&req, sizeof(m38_handled_request *), 0);
 			if (msg_size == -1)
@@ -281,8 +279,7 @@ int m38_http_serve(m38_app *app) {
 	int i;
 	for (i = 0; i < app->num_threads; i++) {
 		handler_arg args = {
-			.all_routes = app->routes,
-			.num_routes = app->num_routes,
+			.app = app,
 			.worker_ident = i
 		};
 		if (pthread_create(&handlers[i], NULL, handler, &args) != 0) {
@@ -317,3 +314,14 @@ error:
 	return -1;
 }
 
+int m38_set_404_handler(m38_app *app,
+	int (*handler)(const m38_http_request *request, m38_http_response *response)) {
+	app->r_404_handler = handler;
+	return 0;
+}
+
+int m38_set_500_handler(m38_app *app,
+	int (*handler)(const m38_http_request *request, m38_http_response *response)) {
+	app->r_error_handler = handler;
+	return 0;
+}

@@ -4,36 +4,27 @@
 #include "types.h"
 
 struct route;
+struct m38_app;
 
-/* xXx STRUCT=m38_app xXx
- * xXx DESCRIPTION=State and data information for a 38-Moths instance. xXx
- * xXx *main_sock_fd=A pointer to the main socket fd. This is a pointer so you can handle SIG* cleanly and shut down the socket. xXx
- * xXx port=The main port to run the server on. Like 8080. Or something. xXx
- * xXx num_threads=The number of threads to use to handle requests. xXx
- * xXx *routes=The array of all routes for your application. xXx
- * xXx num_routes=The number of routes in <code>*routes</code>. xXx
+/* xXx FUNCTION=m38_set_404_handler xXx
+ * xXx DESCRIPTION=Sets the internal 404 handler. Useful for templating your 404 page. xXx
+ * xXx RETURNS=0 on success, -1 on failure. xXx
+ * xXx *app=The app to serve. xXx
  */
-typedef struct {
-	int *main_sock_fd;
-	const int port;
-	const int num_threads;
-	const m38_route *routes;
-	const int num_routes;
-} m38_app;
+int m38_set_404_handler(m38_app *app,
+	int (*handler)(const m38_http_request *request, m38_http_response *response));
+
+/* xXx FUNCTION=m38_set_500_handler xXx
+ * xXx DESCRIPTION=Sets the internal error handler. Useful for templating your internal error page. xXx
+ * xXx RETURNS=0 on success, -1 on failure. xXx
+ * xXx *app=The app to serve. xXx
+ */
+int m38_set_500_handler(m38_app *app,
+	int (*handler)(const m38_http_request *request, m38_http_response *response));
 
 /* xXx FUNCTION=m38_http_serve xXx
  * xXx DESCRIPTION=Starts and runs the HTTP server. xXx
  * xXx RETURNS=0 on success, -1 on failure. xXx
- * xXx *main_sock_fd=A pointer to the main socket fd. This is a pointer so you can handle SIG* cleanly and shut down the socket. xXx
- * xXx port=The main port to run the server on. Like 8080. Or something. xXx
- * xXx num_threads=The number of threads to use to handle requests. xXx
- * xXx *routes=The array of all routes for your application. xXx
- * xXx num_routes=The number of routes in <code>*routes</code>. xXx
- */
-
-/* xXx FUNCTION=m38_http_serve xXx
- * xXx DESCRIPTION=Starts and runs the HTTP server. xXx
- * xXx RETURNS=0 on success, -1 on failure. xXx
- * xXx *app=The app to serve.
+ * xXx *app=The app to serve. xXx
  */
 int m38_http_serve(m38_app *app);

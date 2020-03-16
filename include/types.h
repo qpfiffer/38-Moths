@@ -92,3 +92,21 @@ typedef struct {
 	m38_http_response response;
 } m38_handled_request;
 
+/* xXx STRUCT=m38_app xXx
+ * xXx DESCRIPTION=State and data information for a 38-Moths instance. xXx
+ * xXx *main_sock_fd=A pointer to the main socket fd. This is a pointer so you can handle SIG* cleanly and shut down the socket. xXx
+ * xXx port=The main port to run the server on. Like 8080. Or something. xXx
+ * xXx num_threads=The number of threads to use to handle requests. xXx
+ * xXx *routes=The array of all routes for your application. xXx
+ * xXx num_routes=The number of routes in <code>*routes</code>. xXx
+ */
+typedef struct {
+	int *main_sock_fd;
+	const int port;
+	const int num_threads;
+	const m38_route *routes;
+	const int num_routes;
+
+	int (*r_404_handler)(const m38_http_request *request, m38_http_response *response);
+	int (*r_error_handler)(const m38_http_request *request, m38_http_response *response);
+} m38_app;

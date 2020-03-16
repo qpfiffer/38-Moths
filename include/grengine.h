@@ -54,10 +54,9 @@ void m38_mmap_cleanup(const int status_code, m38_http_response *response);
  * xXx DESCRIPTION=Generates and HTTP response from an accepted connection xXx
  * xXx RETURNS=A fully formatted HTTP response, NULL otherwise. xXx
  * xXx accept_fd=The successfully <code>accept(2)</code>'d file descriptor for the requester's socket. xXx
- * xXx *all_routes=The array of all routes for your application. xXx
- * xXx route_num_elements=The number of routes in <code>*all_routes</code>. xXx
+ * xXx *app=The app to serve routes from. xXx
  */
-m38_handled_request *m38_generate_response(const int accept_fd, const m38_route *all_routes, const size_t route_num_elements);
+m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *app);
 
 /* xXx FUNCTION=m38_send_response xXx
  * xXx DESCRIPTION=Takes a handled_request object rom generate_response and sends chunks of it down the wire. xXx
