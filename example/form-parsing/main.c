@@ -25,6 +25,13 @@ static const m38_route all_routes[] = {
 };
 
 int main(int argc, char *argv[]) {
-	m38_http_serve(&main_sock_fd, 8080, 2, all_routes, sizeof(all_routes)/sizeof(all_routes[0]));
+	m38_app app = {
+		.main_sock_fd = &main_sock_fd,
+		.port = 8080,
+		.num_threads = 2,
+		.routes = all_routes,
+		.num_routes = sizeof(all_routes)/sizeof(all_routes[0])
+	};
+	m38_http_serve(&app);
 	return 0;
 }
