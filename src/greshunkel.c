@@ -675,20 +675,35 @@ _interpolate_loop(const greshunkel_ctext *ctext, const char *buf, size_t *num_re
 static inline int _is_falsey(const greshunkel_tuple *tuple) {
 	const int is_string = tuple->type == GSHKL_STR ? 1 : 0;
 	const int is_null = tuple->value.arr == NULL || strnlen(tuple->value.str, MAX_GSHKL_STR_SIZE) == 0 ? 1 : 0;
+	const int is_loop = tuple->type == GSHKL_ARR ? 1 : 0;
+	const int is_subcontext = tuple->type == GSHKL_SUBCTEXT ? 1 : 0;
 	if (!is_null) {
-		const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
-		return is_string && says_false;
+		if (is_string) {
+			const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
+			return says_false;
+		} else if (is_loop) {
+			const int has_items = tuple->value.arr->count > 0;
+			return !has_items;
+		}
+		return !is_subcontext;
 	}
 	return 0;
 }
 
 static inline int _is_truthy(const greshunkel_tuple *tuple) {
 	const int is_string = tuple->type == GSHKL_STR ? 1 : 0;
+	const int is_loop = tuple->type == GSHKL_ARR ? 1 : 0;
 	const int is_subcontext = tuple->type == GSHKL_SUBCTEXT ? 1 : 0;
 	const int is_null = tuple->value.arr == NULL || strnlen(tuple->value.str, MAX_GSHKL_STR_SIZE) == 0 ? 1 : 0;
 	if (!is_null) {
-		const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
-		return (is_string || is_subcontext) && !says_false;
+		if (is_string) {
+			const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
+			return !says_false;
+		} else if (is_loop) {
+			const int has_items = tuple->value.arr->count > 0;
+			return has_items;
+		}
+		return is_subcontext;
 	}
 	return (is_string || is_subcontext) && !is_null;
 }

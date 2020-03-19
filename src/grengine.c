@@ -584,6 +584,7 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 	free(to_read);
 	free(request.full_header);
 	free(request.full_body);
+	free(request.form_elements);
 	return hreq;
 
 error:
@@ -593,6 +594,7 @@ error:
 	free(to_read);
 	free(request.full_header);
 	free(request.full_body);
+	free(request.form_elements);
 	return NULL;
 }
 
