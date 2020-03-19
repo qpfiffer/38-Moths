@@ -14,3 +14,4 @@
 #include "grengine.h"
 #include "parse.h"
 #include "server.h"
+#include "simple_sparsehash.h"

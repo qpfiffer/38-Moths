@@ -21,9 +21,10 @@
  * xXx resource[128]=The path for this request. (eg. '/articles/182') xXx
  * xXx matches=Any REGEX matches from your path are stored here. xXx
  * xXx header_len=The length of the header, or 0. xXx
- * xXx full_header=The full header text of the request. xXx
+ * xXx *full_header=The full header text of the request. xXx
  * xXx body_len=The length of the POST body, or 0. xXx
- * xXx full_body=The full body. xXx
+ * xXx *full_body=The full body of the request. xXx
+ * xXx *form_elements=If the requests was submitted as Form-Encoded, and parsed correctly, this is the populated dictionary of pairs. xXx
  */
 typedef struct {
 	char verb[VERB_SIZE];
@@ -33,6 +34,7 @@ typedef struct {
 	size_t header_len;
 	unsigned char *full_body;
 	size_t body_len;
+	struct sparse_dict *form_elements;
 } m38_http_request;
 
 /* xXx STRUCT=m38_http_response xXx

@@ -11,6 +11,7 @@
 #include "parse.h"
 #include "grengine.h"
 #include "logging.h"
+#include "simple_sparsehash.h"
 #include "utils.h"
 #include "vector.h"
 
@@ -148,6 +149,50 @@ int test_request_with_body_is_parseable_no_clength() {
 	return 0;
 }
 
+int test_form_encoded_body() {
+	const unsigned char req[] = " GET / HTTP/1.1\r\n"
+		"User-Agent: curl/7.35.0\r\n"
+		"Host: localhost:8080\r\n"
+		"Accept: */*\r\n"
+		"Content-Type: application/x-www-form-urlencoded\r\n"
+		"Content-Length: 11\r\n\r\n"
+		"test=1&23=a";
+	m38_http_request request = {
+		.verb = {0},
+		.resource = {0},
+		.matches = {{0}},
+		.full_header = NULL,
+		.body_len = 0,
+		.full_body = NULL,
+		.form_elements = NULL
+	};
+
+	int rc = m38_parse_request(req, strlen((char *)req), &request);
+	if (rc != 0)
+		return 1;
+	rc = m38_parse_body(strlen("test=1&23=a"), 11, req, &request);
+	if (rc != 0)
+		return 1;
+	rc = m38_parse_form_encoded_body(&request);
+	if (rc != 0)
+		return 1;
+
+	if (!request.form_elements)
+		return 1;
+
+	const char *test_value = NULL, *a_value = NULL;
+	size_t test_size = 0, a_size = 0;
+	if (!(test_value = sparse_dict_get(request.form_elements, "test", strlen("test"), &test_size)))
+		return 1;
+	if (strncmp(test_value, "1", sizeof("1")) != 0)
+		return 1;
+	if (!(a_value = sparse_dict_get(request.form_elements, "23", strlen("23"), &a_size)))
+		return 1;
+	if (strncmp(a_value, "asdf", sizeof("asdf")) != 0)
+		return 1;
+	return 0;
+}
+
 int test_request_with_body_is_parseable() {
 	const unsigned char req[] = " GET / HTTP/1.1\r\n"
 		"User-Agent: curl/7.35.0\r\n"
@@ -231,6 +276,7 @@ int main(int argc, char *argv[]) {
 	run_test(test_request_with_body_is_parseable);
 	run_test(test_request_body_is_extracted);
 	run_test(test_request_with_body_is_parseable_no_clength);
+	run_test(test_form_encoded_body);
 
 	m38_log_msg(LOG_INFO, "Tests passed: (%i/%i).\n", tests_run, tests_run + tests_failed);
 

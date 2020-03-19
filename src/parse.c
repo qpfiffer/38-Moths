@@ -199,3 +199,8 @@ int m38_parse_body(const size_t received_body_len,
 
 	return 0;
 }
+
+int m38_parse_form_encoded_body(m38_http_request *request) {
+	UNUSED(request);
+	return -1;
+}

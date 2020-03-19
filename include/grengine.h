@@ -5,6 +5,16 @@
 #include "types.h"
 #include "greshunkel.h"
 
+/* xXx DEFINE=MAX_READ_LEN xXx
+* xXx DESCRIPTION=The maximum amount of bytes to be read when receiving a request. xXx
+*/
+#define MAX_READ_LEN 1024
+
+/* xXx DEFINE=MAX_REQUEST_SIZE xXx
+* xXx DESCRIPTION=The maximum amount of bytes to be read from any single request. Default set to 2Mb. xXx
+*/
+#define MAX_REQUEST_SIZE 2097152
+
 /* xXx DEFINE=RESPONSE_OK xXx
 * xXx DESCRIPTION=Macro used to check whether a status code is 'good'. xXx
 */

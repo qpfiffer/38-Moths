@@ -302,6 +302,8 @@ static int read_max_bytes_from_socket(const int accept_fd, unsigned char **to_re
 			goto error;
 		}
 		memset(*to_read + *num_read, '\0', MAX_READ_LEN);
+		if (*num_read >= MAX_REQUEST_SIZE)
+			break;
 	}
 
 	return 0;
@@ -345,7 +347,6 @@ error:
 }
 
 m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *app) {
-	/* TODO: Malloc here */
 	unsigned char *to_read = calloc(1, MAX_READ_LEN);
 	char *actual_response = NULL;
 	m38_http_response response = {
@@ -362,7 +363,6 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 	rc = read_max_bytes_from_socket(accept_fd, &to_read, &num_read);
 	if (rc != 0)
 		goto error;
-
 
 	m38_http_request request = {
 		.verb = {0},
@@ -405,6 +405,23 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 			goto error;
 		}
 	}
+
+	/* CHECK ENCODING HERE */
+	const char form_encoding[] = "application/x-www-form-urlencoded";
+	const size_t form_encoding_siz = sizeof(form_encoding);
+	char *content_type = m38_get_header_value_request(&request, "Content-Type");
+	if (content_type &&
+			strlen(content_type) == form_encoding_siz &&
+			strncmp(form_encoding, content_type, form_encoding_siz)) {
+		rc = m38_parse_form_encoded_body(&request);
+		if (rc != 0) {
+			/* application/x-www-form-urlencoded */
+			m38_log_msg(LOG_ERR, "Could not parse form-urlencoded body.");
+			goto error;
+		}
+	
+	}
+	/* --- */
 
 	/* Find our matching route: */
 	int64_t i;
