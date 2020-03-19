@@ -58,10 +58,10 @@ struct sparse_dict {
 /* ------------ */
 
 struct sparse_array *sparse_array_init(const size_t element_size, const uint32_t maximum);
-const int sparse_array_set(struct sparse_array *arr, const uint32_t i,
+int sparse_array_set(struct sparse_array *arr, const uint32_t i,
 						   const void *val, const size_t vlen);
 const void *sparse_array_get(struct sparse_array *arr, const uint32_t i, size_t *outsize);
-const int sparse_array_free(struct sparse_array *arr);
+int sparse_array_free(struct sparse_array *arr);
 
 
 /* ----------------- */
@@ -72,15 +72,15 @@ const int sparse_array_free(struct sparse_array *arr);
 struct sparse_dict *sparse_dict_init();
 
 /* Copies `value` into `dict`. */
-const int sparse_dict_set(struct sparse_dict *dict,
+int sparse_dict_set(struct sparse_dict *dict,
 						  const char *key, const size_t klen,
 						  const void *value, const size_t vlen);
 
 /* Returns the value of `key` from `dict`. *outsize will be filled out if it
  * is non-null.
  */
-const void *sparse_dict_get(struct sparse_dict *dict, const char *key,
+void *sparse_dict_get(struct sparse_dict *dict, const char *key,
 							const size_t klen, size_t *outsize);
 
 /* Frees and cleans up a sparse_dict created with sparse_dict_init(). */
-const int sparse_dict_free(struct sparse_dict *dict);
+int sparse_dict_free(struct sparse_dict *dict);

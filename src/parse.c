@@ -13,6 +13,7 @@
 #include "grengine.h"
 #include "parse.h"
 #include "logging.h"
+#include "simple_sparsehash.h"
 #include "utils.h"
 
 m38_range_header m38_parse_range_header(const char *range_query) {
@@ -201,6 +202,34 @@ int m38_parse_body(const size_t received_body_len,
 }
 
 int m38_parse_form_encoded_body(m38_http_request *request) {
-	UNUSED(request);
+	struct sparse_dict *new_dict = NULL;
+	char *potential_kv_pair = NULL;
+	char *duplicated_body = strndup((char *)request->full_body, request->body_len);
+	if (!duplicated_body) {
+		goto err;
+	}
+
+	new_dict = sparse_dict_init();
+
+	while ((potential_kv_pair = strsep((char **)&request->full_body, "&")) != NULL) {
+		char *key = NULL;
+		char *value = NULL;
+		key = strsep(&potential_kv_pair, "=");
+		value = strsep(&potential_kv_pair, "=");
+
+		if (!key || !value) {
+			continue;
+		}
+
+		sparse_dict_set(new_dict, key, strlen(key), value, strlen(value));
+	}
+
+	request->form_elements = new_dict;
+	free(duplicated_body);
+	return 0;
+
+err:
+	free(duplicated_body);
+	free(new_dict);
 	return -1;
 }

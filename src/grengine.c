@@ -406,7 +406,7 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 		}
 	}
 
-	/* CHECK ENCODING HERE */
+	/* Parses form encoding, if applicable: */
 	const char form_encoding[] = "application/x-www-form-urlencoded";
 	const size_t form_encoding_siz = sizeof(form_encoding);
 	char *content_type = m38_get_header_value_request(&request, "Content-Type");
@@ -421,7 +421,6 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 		}
 	
 	}
-	/* --- */
 
 	/* Find our matching route: */
 	int64_t i;

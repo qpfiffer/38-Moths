@@ -184,11 +184,11 @@ int test_form_encoded_body() {
 	size_t test_size = 0, a_size = 0;
 	if (!(test_value = sparse_dict_get(request.form_elements, "test", strlen("test"), &test_size)))
 		return 1;
-	if (strncmp(test_value, "1", sizeof("1")) != 0)
+	if (strncmp(test_value, "1", test_size) != 0)
 		return 1;
 	if (!(a_value = sparse_dict_get(request.form_elements, "23", strlen("23"), &a_size)))
 		return 1;
-	if (strncmp(a_value, "asdf", sizeof("asdf")) != 0)
+	if (strncmp(a_value, "asdf", a_size) != 0)
 		return 1;
 	return 0;
 }

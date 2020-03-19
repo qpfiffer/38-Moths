@@ -11,7 +11,7 @@
 /* One of the simplest hashing functions, FNV-1a. See the wikipedia article for more info:
  * http://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
  */
-static const uint64_t hash_fnv1a(const char *key, const size_t klen) {
+static uint64_t hash_fnv1a(const char *key, const size_t klen) {
 	static const uint64_t fnv_prime = 1099511628211ULL;
 	static const uint64_t fnv_offset_bias = 14695981039346656037ULL;
 
@@ -29,12 +29,12 @@ static const uint64_t hash_fnv1a(const char *key, const size_t klen) {
 }
 
 /* TODO: Figure out better names for charbit/modbit */
-static const uint32_t charbit(const uint32_t position) {
+static uint32_t charbit(const uint32_t position) {
 	/* Get enough bits to store 0 - 31. */
 	return position >> 5;
 }
 
-static const uint32_t modbit(const uint32_t position) {
+static uint32_t modbit(const uint32_t position) {
 	/* Get the number of bits of this number that are 0 - 31,
 	 * or something like that.
 	 */
@@ -63,7 +63,7 @@ static inline uint32_t popcount_32(uint32_t x) {
  * 0 .. i-1 in the bitmap. The original implementation uses a big table for the
  * popcount.
  */
-static const uint32_t position_to_offset(const uint32_t *bitmap,
+static uint32_t position_to_offset(const uint32_t *bitmap,
 									   const uint32_t position) {
 	uint32_t retval = 0;
 	uint32_t pos = position;
@@ -84,7 +84,7 @@ static const uint32_t position_to_offset(const uint32_t *bitmap,
 }
 
 /* Simple check to see whether a slot in the array is occupied or not. */
-static const int is_position_occupied(const uint32_t *bitmap,
+static int is_position_occupied(const uint32_t *bitmap,
 							 const uint32_t position) {
 	return bitmap[charbit(position)] & modbit(position);
 }
@@ -94,7 +94,7 @@ static void set_position(uint32_t *bitmap, const uint32_t position) {
 }
 
 /* Sparse Array */
-static const int _sparse_array_group_set(struct sparse_array_group *arr, const uint32_t i,
+static int _sparse_array_group_set(struct sparse_array_group *arr, const uint32_t i,
 						   const void *val, const size_t vlen) {
 	uint32_t offset = 0;
 	void *destination = NULL;
@@ -172,7 +172,7 @@ static const void *_sparse_array_group_get(struct sparse_array_group *arr,
 	return item;
 }
 
-static const int _sparse_array_group_free(struct sparse_array_group *arr) {
+static int _sparse_array_group_free(struct sparse_array_group *arr) {
 	free(arr->group);
 	return 1;
 }
@@ -210,7 +210,7 @@ struct sparse_array *sparse_array_init(const size_t element_size, const uint32_t
 	return arr;
 }
 
-const int sparse_array_set(struct sparse_array *arr, const uint32_t i,
+int sparse_array_set(struct sparse_array *arr, const uint32_t i,
 						   const void *val, const size_t vlen) {
 	/* Don't let users set outside the bounds of the array. */
 	if (i > arr->maximum)
@@ -231,7 +231,7 @@ const void *sparse_array_get(struct sparse_array *arr, const uint32_t i, size_t 
 	return _sparse_array_group_get(operating_group, position, outsize);
 }
 
-const int sparse_array_free(struct sparse_array *arr) {
+int sparse_array_free(struct sparse_array *arr) {
 	unsigned int i = 0;
 	for (; i < MAX_ARR_SIZE; i++) {
 		struct sparse_array_group *sag = &arr->groups[i];
@@ -262,11 +262,11 @@ error:
 	return NULL;
 }
 
-static const int _create_and_insert_new_bucket(
-						struct sparse_array *array, const unsigned int i,
-						const char *key, const size_t klen,
-						const void *value, const size_t vlen,
-						const uint64_t key_hash) {
+static int _create_and_insert_new_bucket(
+		struct sparse_array *array, const unsigned int i,
+		const char *key, const size_t klen,
+		const void *value, const size_t vlen,
+		const uint64_t key_hash) {
 	void *copied_value = NULL;
 	char *copied_key = NULL;
 
@@ -296,7 +296,7 @@ error:
 	return 0;
 }
 
-static const int _rehash_and_grow_table(struct sparse_dict *dict) {
+static int _rehash_and_grow_table(struct sparse_dict *dict) {
 	/* We've reached our chosen 'rehash the table' point, so
 	 * we need to resize the table now.
 	 */
@@ -358,9 +358,9 @@ error:
 	return 0;
 }
 
-const int sparse_dict_set(struct sparse_dict *dict,
-						  const char *key, const size_t klen,
-						  const void *value, const size_t vlen) {
+int sparse_dict_set(struct sparse_dict *dict,
+		const char *key, const size_t klen,
+		const void *value, const size_t vlen) {
 	const uint64_t key_hash = hash_fnv1a(key, klen);
 	unsigned int num_probes = 0;
 
@@ -427,7 +427,7 @@ error:
 	return 0;
 }
 
-const void *sparse_dict_get(struct sparse_dict *dict, const char *key,
+void *sparse_dict_get(struct sparse_dict *dict, const char *key,
 							const size_t klen, size_t *outsize) {
 	const uint64_t key_hash = hash_fnv1a(key, klen);
 	unsigned int num_probes = 0;
@@ -463,7 +463,7 @@ const void *sparse_dict_get(struct sparse_dict *dict, const char *key,
 	return NULL;
 }
 
-const int sparse_dict_free(struct sparse_dict *dict) {
+int sparse_dict_free(struct sparse_dict *dict) {
 	unsigned int i = 0;
 	for (i = 0; i < dict->bucket_max; i++) {
 		size_t current_value_siz = 0;
