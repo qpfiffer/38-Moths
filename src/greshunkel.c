@@ -775,7 +775,6 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 			to_render_line.data = strndup(conditional_meat.start, conditional_meat.len);
 			to_render_line.size = conditional_meat.len;
 
-			/* TODO: This should use gshkl_render. See _interpolate_loop */
 			line rendered_piece = {0};
 
 			/* Recurse contexts until my fucking mind melts. */
