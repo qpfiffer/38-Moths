@@ -776,7 +776,12 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 			to_render_line.size = conditional_meat.len;
 
 			/* TODO: This should use gshkl_render. See _interpolate_loop */
-			line rendered_piece = _interpolate_line(ctext, to_render_line, all_regex);
+			line rendered_piece = {0};
+
+			/* Recurse contexts until my fucking mind melts. */
+			greshunkel_ctext *_temp_ctext = _gshkl_init_child_context(ctext);
+			rendered_piece.data = gshkl_render(_temp_ctext, to_render_line.data, to_render_line.size, &rendered_piece.size);
+			gshkl_free_context(_temp_ctext);
 
 			const size_t old_size = to_return.size;
 			to_return.size += rendered_piece.size;
@@ -787,8 +792,7 @@ _interpolate_conditionals(const greshunkel_ctext *ctext, const char *buf, size_t
 			}
 
 			memcpy(to_return.data + old_size, rendered_piece.data, rendered_piece.size);
-			if (rendered_piece.data != to_render_line.data)
-				free(rendered_piece.data);
+			free(rendered_piece.data);
 			free(to_render_line.data);
 		}
 	} else if (regexec_2_0_beta(&all_regex->c_conditional_regex, buf, 3, match) == 0) {

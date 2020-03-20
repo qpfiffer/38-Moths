@@ -379,6 +379,36 @@ int test_subcontext_interpolation() {
 	return 0;
 }
 
+int test_loop_in_unless() {
+	size_t new_size = 0;
+	const char document[] =
+		"xXx UNLESS NOT @errors xXx\n"
+		"    xXx LOOP error errors xXx\n"
+		"        xXx @error xXx\n"
+		"    xXx BBL xXx\n"
+		"xXx ENDLESS xXx\n";
+	const char document_correct[] = "\n        1\n    \n        2\n    \n        3\n    \n";
+
+	greshunkel_ctext *ctext = gshkl_init_context();
+	greshunkel_var loop = gshkl_add_array(ctext, "errors");
+	gshkl_add_string_to_loop(&loop, "1");
+	gshkl_add_string_to_loop(&loop, "2");
+	gshkl_add_string_to_loop(&loop, "3");
+
+	char *rendered = gshkl_render(ctext, document, strlen(document), &new_size);
+	gshkl_free_context(ctext);
+
+	int ret = strcmp(rendered, document_correct);
+	if (ret) {
+		free(rendered);
+		return 1;
+	}
+
+	free(rendered);
+
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	UNUSED(argc);
 	UNUSED(argv);
