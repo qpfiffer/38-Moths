@@ -408,11 +408,12 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 
 	/* Parses form encoding, if applicable: */
 	const char form_encoding[] = "application/x-www-form-urlencoded";
-	const size_t form_encoding_siz = sizeof(form_encoding);
+	const size_t form_encoding_siz = strlen(form_encoding);
 	char *content_type = m38_get_header_value_request(&request, "Content-Type");
+
 	if (content_type &&
-			strlen(content_type) == form_encoding_siz &&
-			strncmp(form_encoding, content_type, form_encoding_siz)) {
+			strlen(content_type) >= form_encoding_siz &&
+			strncmp(form_encoding, content_type, form_encoding_siz) == 0) {
 		rc = m38_parse_form_encoded_body(&request);
 		if (rc != 0) {
 			/* application/x-www-form-urlencoded */
