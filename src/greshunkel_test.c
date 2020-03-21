@@ -52,7 +52,7 @@ int test_unless() {
 
 	const char document_correct[] = "\n<p>You should see this. 1/3</p>\n"
 		"\n<p>You should see this. 2/3</p>\n"
-		"\n<p>You should see this. 3/3</p>\n\n";
+		"\n<p>You should see this. 3/3</p>\n";
 
 	greshunkel_ctext *ctext = gshkl_init_context();
 	gshkl_add_string(ctext, "truthy", "TRUE");
