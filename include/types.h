@@ -106,8 +106,8 @@ typedef struct {
  */
 typedef struct {
 	int *main_sock_fd;
-	const int port;
-	const int num_threads;
+	int port;
+	int num_threads;
 	const m38_route *routes;
 	const int num_routes;
 
