@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "greshunkel.h"
+#include "logging.h"
 
 /* Compiled regex vars. */
 struct compiled_regex {
@@ -680,13 +681,18 @@ static inline int _is_falsey(const greshunkel_tuple *tuple) {
 	if (!is_null) {
 		if (is_string) {
 			const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
+			m38_log_msg(LOG_DEBUG, "_is_falsey: is_string SF: %i", says_false);
 			return says_false;
 		} else if (is_loop) {
 			const int has_items = tuple->value.arr->count > 0;
+			m38_log_msg(LOG_DEBUG, "_is_falsey: s_string is_loop has_items: %i", !has_items);
 			return !has_items;
 		}
+		m38_log_msg(LOG_DEBUG, "_is_falsey: !is_null is_subcontext: %i", !is_subcontext);
 		return !is_subcontext;
 	}
+
+	m38_log_msg(LOG_DEBUG, "_is_falsey: return 0");
 	return 0;
 }
 
@@ -698,14 +704,20 @@ static inline int _is_truthy(const greshunkel_tuple *tuple) {
 	if (!is_null) {
 		if (is_string) {
 			const int says_false = strncmp(tuple->value.str, "FALSE", strlen("FALSE")) == 0 ? 1 : 0;
+			m38_log_msg(LOG_DEBUG, "_is_truthy: !is_null is_string SF: %i", !says_false);
 			return !says_false;
 		} else if (is_loop) {
 			const int has_items = tuple->value.arr->count > 0;
+			m38_log_msg(LOG_DEBUG, "_is_truthy: !is_null is_loop has_items: %i", has_items);
 			return has_items;
 		}
+		m38_log_msg(LOG_DEBUG, "_is_truthy: !is_null  is_subcontext: %i", is_subcontext);
 		return is_subcontext;
 	}
-	return (is_string || is_subcontext) && !is_null;
+
+	int rc = (is_string || is_subcontext) && !is_null;
+	m38_log_msg(LOG_DEBUG, "_is_truthy: complex: %i %i %i %i", rc, is_string, is_subcontext, !is_null);
+	return rc;
 }
 
 static line

@@ -316,12 +316,46 @@ error:
 
 int m38_set_404_handler(m38_app *app,
 	int (*handler)(const m38_http_request *request, m38_http_response *response)) {
-	app->r_404_handler = handler;
+	if (app->r_404_route) {
+		app->r_404_route->handler = handler;
+	} else {
+		m38_route *new_route = calloc(1, sizeof(m38_route));
+		new_route->handler = handler;
+		new_route->cleanup = NULL;
+		strncpy(new_route->name, "Custom 404 Handler", sizeof(new_route->name));
+		strncpy(new_route->verb, "GET", sizeof(new_route->verb));
+		strncpy(new_route->route_match, "^.*$", sizeof(new_route->route_match));
+
+		app->r_404_route = new_route;
+	}
+
 	return 0;
 }
 
-int m38_set_500_handler(m38_app *app,
-	int (*handler)(const m38_http_request *request, m38_http_response *response)) {
-	app->r_error_handler = handler;
+int m38_set_404_cleanup(m38_app *app,
+	void (*cleanup)(const int status_code, m38_http_response *response)) {
+	if (app->r_404_route) {
+		app->r_404_route->cleanup = cleanup;
+	} else {
+		m38_route *new_route = calloc(1, sizeof(m38_route));
+		new_route->handler = NULL;
+		new_route->cleanup = cleanup;
+		strncpy(new_route->name, "Custom 404 Handler", sizeof(new_route->name));
+		strncpy(new_route->verb, "GET", sizeof(new_route->verb));
+		strncpy(new_route->route_match, "^.*$", sizeof(new_route->route_match));
+
+		app->r_404_route = new_route;
+	}
 	return 0;
 }
+
+// int m38_set_500_handler(m38_app *app,
+// 	int (*handler)(const m38_http_request *request, m38_http_response *response)) {
+// 	app->r_error_handler = handler;
+// 		m38_route *new_route = calloc(1, sizeof(m38_route));
+// 		new_route->verb = "GET",
+// 		new_route->route_match = "^.*$",
+// 		new_route->handler = (&r_404_handler),
+// 		new_route->cleanup = NULL
+// 	return 0;
+// }

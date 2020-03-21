@@ -101,6 +101,8 @@ typedef struct {
  * xXx num_threads=The number of threads to use to handle requests. xXx
  * xXx *routes=The array of all routes for your application. xXx
  * xXx num_routes=The number of routes in <code>*routes</code>. xXx
+ * xXx *r_404_route=A route representing a custom 404 handler. xXx
+ * xXx *r_error_route=A route representing a custom 500/error handler. xXx
  */
 typedef struct {
 	int *main_sock_fd;
@@ -109,6 +111,6 @@ typedef struct {
 	const m38_route *routes;
 	const int num_routes;
 
-	int (*r_404_handler)(const m38_http_request *request, m38_http_response *response);
-	int (*r_error_handler)(const m38_http_request *request, m38_http_response *response);
+	m38_route *r_404_route;
+	m38_route *r_error_route;
 } m38_app;

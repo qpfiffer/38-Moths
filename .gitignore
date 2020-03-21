@@ -1,6 +1,6 @@
 .gdb_history
 *.o
-*.swp
+*.sw[op]
 waifu.xyz
 dbctl
 greshunkel_test

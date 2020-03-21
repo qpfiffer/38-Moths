@@ -47,12 +47,20 @@ int m38_render_file(const struct greshunkel_ctext *ctext, const char *file_path,
 int m38_return_raw_buffer(const char *buf, const size_t buf_size, m38_http_response *response);
 
 /* xXx FUNCTION=m38_heap_cleanup xXx
- * xXx DESCRIPTION=Simple function that <code>free()</code>'s memory in <code>out</code>. xXx
+ * xXx DESCRIPTION=Simple function that <code>free()</code>'s memory in <code>out</code>, but only if the response code was OK. xXx
  * xXx RETURNS=Nothing. xXx
  * xXx status_code=The status code returned from the handler. xXx
  * xXx *response=The <code>m38_http_response</code> object returned from the handler. xXx
  */
 void m38_heap_cleanup(const int status_code, m38_http_response *response);
+
+/* xXx FUNCTION=m38_heap_cleanup_no_check xXx
+ * xXx DESCRIPTION=Simple function that <code>free()</code>'s memory in <code>out</code>, always. Good for a custom 404 handler. See <code>m38_heap_cleanup</code>. xXx
+ * xXx RETURNS=Nothing. xXx
+ * xXx status_code=The status code returned from the handler. xXx
+ * xXx *response=The <code>m38_http_response</code> object returned from the handler. xXx
+ */
+void m38_heap_cleanup_no_check(const int status_code, m38_http_response *response);
 
 /* xXx FUNCTION=m38_mmap_cleanup xXx
  * xXx DESCRIPTION=The cleanup handler for <code>mmap_file</code>. Expects <code>*extradata</code> to be a <code>struct stat</code> object. xXx

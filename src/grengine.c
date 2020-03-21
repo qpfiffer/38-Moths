@@ -229,6 +229,11 @@ int m38_mmap_file(const char *file_path, m38_http_response *response) {
 	return mmap_file_ol(file_path, response, NULL, NULL);
 }
 
+void m38_heap_cleanup_no_check(const int status_code, m38_http_response *response) {
+	UNUSED(status_code);
+	free(response->out);
+}
+
 void m38_heap_cleanup(const int status_code, m38_http_response *response) {
 	if (RESPONSE_OK(status_code))
 		free(response->out);
@@ -455,11 +460,12 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 	int64_t response_code = 0;
 	if (matching_route == NULL) {
 		matching_route = &r_404_route;
-		if (app->r_404_handler) {
-			response_code = app->r_404_handler(&request, &response);
+		response_code = 404;
+		if (app->r_404_route) {
+			m38_log_msg(LOG_INFO, "Setting custom 404 handler for %s.", matching_route->name);
+			matching_route = app->r_404_route;
 		} else {
-			m38_log_msg(LOG_INFO, "Calling internal 404 handler for %s.", matching_route->name);
-			response_code = matching_route->handler(&request, &response);
+			m38_log_msg(LOG_INFO, "Using internal 404 handler for %s.", matching_route->name);
 		}
 	} else {
 		/* Run the handler through with the data we have: */
@@ -467,11 +473,25 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 		response_code = matching_route->handler(&request, &response);
 	}
 
+	/* It doesn't seem like you actually need the response.outsize and .out checks here,
+	 * but this makes it so that a view function can return a 404 and the 404 handler will
+	 * be called. Very nifty.
+	 */
 	if (response_code == 404 && (response.outsize == 0 || response.out == NULL)) {
-		if (app->r_404_handler) {
-			response_code = app->r_404_handler(&request, &response);
+		m38_log_msg(LOG_INFO, "No response gen: Calling 404 handler for %s.", matching_route->name);
+		matching_route = &r_404_route;
+
+		if (app->r_404_route) {
+			m38_log_msg(LOG_INFO, "Setting custom 404 handler for %s.", matching_route->name);
+			matching_route = app->r_404_route;
 		} else {
-			response_code = r_404_handler(&request, &response);
+			m38_log_msg(LOG_INFO, "Using internal 404 handler for %s.", matching_route->name);
+		}
+
+		if (matching_route->handler) {
+			response_code = matching_route->handler(&request, &response);
+		} else {
+			m38_log_msg(LOG_ERR, "No handler for route %s.", matching_route->name);
 		}
 	}
 
@@ -627,8 +647,7 @@ m38_handled_request *m38_send_response(m38_handled_request *hreq) {
 	if (hreq->response_len - hreq->sent <= 0) {
 		if (matching_route->cleanup != NULL) {
 			m38_log_msg(LOG_INFO, "Calling cleanup for %s.", matching_route->name);
-			if (matching_route->cleanup)
-				matching_route->cleanup(hreq->response_code, &hreq->response);
+			matching_route->cleanup(hreq->response_code, &hreq->response);
 		}
 		_clean_up_extra_headers(&hreq->response);
 		close(hreq->accept_fd);

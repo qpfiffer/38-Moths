@@ -18,7 +18,7 @@ clean:
 	rm -f $(NAME)
 
 test: greshunkel_test unit_test
-greshunkel_test: greshunkel_test.o greshunkel.o vector.o
+greshunkel_test: greshunkel_test.o greshunkel.o logging.o vector.o
 	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o greshunkel_test $^
 
 unit_test: $(COMMON_OBJ) grengine.o utests.o greshunkel.o vector.o parse.o

@@ -10,7 +10,7 @@ static int index_handler(const m38_http_request *request, m38_http_response *res
 }
 
 static int r_404_handler(const m38_http_request *request, m38_http_response *response) {
-	const unsigned char buf[] = "This is a cbustom 404 page.";
+	const unsigned char buf[] = "This is a custom 404 page.";
 	response->out = malloc(sizeof(buf));
 	memcpy(response->out, buf, sizeof(buf));
 
@@ -31,6 +31,7 @@ int main(int argc, char *argv[]) {
 		.num_routes = sizeof(all_routes)/sizeof(all_routes[0])
 	};
 	m38_set_404_handler(&app, &r_404_handler);
+	m38_set_404_cleanup(&app, &m38_heap_cleanup_no_check);
 	m38_http_serve(&app);
 	return 0;
 }
