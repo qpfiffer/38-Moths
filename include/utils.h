@@ -73,3 +73,11 @@ int hash_string_fnv1a(const unsigned char *string, const size_t siz, char outbuf
 * xXx needle=The value you're looking for inside the cookie, like `sessionid`. xXx
 */
 char *m38_get_cookie_value(const char *cookie_string, const size_t cookie_string_siz, const char *needle);
+
+/* xXx FUNCTION=m38_url_decode xXx
+* xXx DESCRIPTION=Turns a url encoded string into a regular string. xXx
+* xXx RETURNS=-1 on failure. xXx
+* xXx *s=The string to  xXx
+* xXx *dec=The outbuffer for the decoded string. xXx
+*/
+int m38_url_decode(const char *s, char *dec);

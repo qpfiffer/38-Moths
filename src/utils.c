@@ -17,6 +17,34 @@
 #include "logging.h"
 #include "utils.h"
 
+inline static int _ishex(int x) {
+	return (x >= '0' && x <= '9') ||
+		(x >= 'a' && x <= 'f') ||
+		(x >= 'A' && x <= 'F');
+}
+
+/* Taken from the wikipedia page on URL decoding. */
+int m38_url_decode(const char *s, char *dec) {
+	char *o;
+	const char *end = s + strlen(s);
+	int c;
+
+	for (o = dec; s <= end; o++) {
+		c = *s++;
+		if (c == '+') c = ' ';
+		else if (c == '%' && (!_ishex(*s++) ||
+					!_ishex(*s++) ||
+					!sscanf(s - 2, "%2x", &c)))
+			return -1;
+
+		if (dec) {
+			*o = c;
+		}
+	}
+
+	return o - dec;
+}
+
 int endswith(const char *string, const char *suffix) {
 	size_t string_siz = strlen(string);
 	size_t suffix_siz = strlen(suffix);
@@ -87,28 +115,29 @@ int hash_string_fnv1a(const unsigned char *key, const size_t siz, char outbuf[st
 	return 1;
 }
 
+
 char *m38_get_cookie_value(const char *cookie_string, const size_t cookie_string_siz, const char *needle) {
 	/* TODO: Make sure this function handles bad input. */
 	if (!cookie_string)
-		return NULL;
+			return NULL;
 
 	const char *cookie_loc = strnstr(cookie_string, needle, cookie_string_siz);
 	if (!cookie_loc)
-		return NULL;
+			return NULL;
 
 	const char *cookie_string_start = cookie_loc;
 	const char *cookie_string_end = strnstr(cookie_loc, ";", cookie_string_siz - (cookie_loc - cookie_string));
 	if (!cookie_string_end) {
-		/* This is okay, it might be at the end of the cookie. */
-		cookie_string_end = strnstr(cookie_loc, " ", cookie_string_siz - (cookie_loc - cookie_string));
-		if (!cookie_string_end)
-			cookie_string_end = cookie_loc + cookie_string_siz;
+			/* This is okay, it might be at the end of the cookie. */
+			cookie_string_end = strnstr(cookie_loc, " ", cookie_string_siz - (cookie_loc - cookie_string));
+			if (!cookie_string_end)
+					cookie_string_end = cookie_loc + cookie_string_siz;
 	}
 
 	const size_t cookie_string_size = cookie_string_end - cookie_string_start;
 	const char *cookie_string_value = strnstr(cookie_loc, "=", cookie_string_size);
 	if (!cookie_string_value)
-		return NULL;
+			return NULL;
 
 	/* -1 here is for the '=': */
 	const size_t cookie_string_value_size = cookie_string_end - cookie_string_value;

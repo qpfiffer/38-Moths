@@ -221,7 +221,13 @@ int m38_parse_form_encoded_body(m38_http_request *request) {
 			continue;
 		}
 
-		sparse_dict_set(new_dict, key, strlen(key), value, strlen(value));
+		char *decoded_buffer = calloc(1, strlen(value));
+		if (m38_url_decode(value, decoded_buffer) > 0) {
+			sparse_dict_set(new_dict, key, strlen(key), decoded_buffer, strlen(decoded_buffer));
+		} else {
+			m38_log_msg(LOG_WARN, "Could not place item into form elements dict.");
+		}
+		free(decoded_buffer);
 	}
 
 	request->form_elements = new_dict;
