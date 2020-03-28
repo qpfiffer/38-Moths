@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <regex.h>
+#include <sys/epoll.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/socket.h>
@@ -30,6 +31,8 @@
 
 #define ACCEPTED_SOCKET_QUEUE_NAME "/mothsaqueue"
 #define HANDLED_CONNECTION_QUEUE_NAME "/mothshqueue"
+
+#define MAX_EVENTS 64
 
 typedef struct {
 	const int main_sock_fd;
@@ -55,6 +58,7 @@ static inline mqd_t _open_queue(const char *queue_name, int flags, const size_t 
 
 	return to_return;
 }
+
 static void *acceptor(void *arg) {
 	mqd_t accepted_socket_queue = 0;
 	const acceptor_arg *args = arg;
@@ -67,22 +71,62 @@ static void *acceptor(void *arg) {
 		return NULL;
 	}
 
+	struct epoll_event events[MAX_EVENTS] = {0};
+	struct epoll_event ev = {0};
+
+	int epollfd = epoll_create1(0);
+	if (epollfd == -1) {
+		m38_log_msg(LOG_ERR, "Acceptor: Could not create epollfd.");
+		perror("Acceptor: ");
+		return NULL;
+	}
+
+	ev.events = EPOLLIN;
+	ev.data.fd = main_sock_fd;
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, main_sock_fd, &ev) == -1) {
+		m38_log_msg(LOG_ERR, "Acceptor: Could not thunk epollctl.");
+		perror("Acceptor: ");
+		return NULL;
+	}
+
 	while(1) {
 		struct sockaddr_storage their_addr = {0};
 		socklen_t sin_size = sizeof(their_addr);
 
-		int new_fd = accept(main_sock_fd, (struct sockaddr *)&their_addr, &sin_size);
-
-		if (new_fd == -1) {
-			m38_log_msg(LOG_ERR, "Acceptor: Could not accept new connection.");
+		int nfds = epoll_wait(epollfd, events, MAX_EVENTS, -1);
+		if (nfds == -1) {
+			m38_log_msg(LOG_ERR, "Acceptor: Could not epoll_wait.");
+			perror("Acceptor: ");
 			return NULL;
 		}
 
-		ssize_t msg_size = mq_send(accepted_socket_queue, (char *)&new_fd, sizeof(int), 0);
-		if (msg_size == -1) {
-			/* We want to continue from this error. Maybe the queue is full or something. */
-			m38_log_msg(LOG_ERR, "Acceptor: Could not queue new accepted connection.");
-			close(new_fd);
+		for (int i = 0; i < nfds; i++) {
+			if (events[i].data.fd == main_sock_fd) {
+				int new_fd = accept(main_sock_fd, (struct sockaddr *)&their_addr, &sin_size);
+
+				if (new_fd == -1) {
+					m38_log_msg(LOG_ERR, "Acceptor: Could not accept new connection.");
+					perror("Acceptor: ");
+					return NULL;
+				}
+
+				ev.events = EPOLLIN | EPOLLET;
+				ev.data.fd = new_fd;
+				if (epoll_ctl(epollfd, EPOLL_CTL_ADD, new_fd, &ev) == -1) {
+					m38_log_msg(LOG_ERR, "Acceptor: conn_sock");
+					perror("Acceptor: ");
+					exit(EXIT_FAILURE);
+				}
+
+				ssize_t msg_size = mq_send(accepted_socket_queue, (char *)&new_fd, sizeof(int), 0);
+				if (msg_size == -1) {
+					/* We want to continue from this error. Maybe the queue is full or something. */
+					m38_log_msg(LOG_ERR, "Acceptor: Could not queue new accepted connection.");
+					close(new_fd);
+				}
+			} else {
+				do_use_fd(events[n].data.fd);
+			}
 		}
 	}
 
