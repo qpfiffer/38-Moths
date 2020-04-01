@@ -636,7 +636,7 @@ m38_handled_request *m38_send_response(m38_handled_request *hreq) {
 
 	const size_t bytes_left = hreq->response_len - hreq->sent;
 	const size_t to_send = bytes_left < 4096 ? bytes_left : 4096;
-	int rc = send(hreq->accept_fd, hreq->response_bytes + hreq->sent, to_send, 0);
+	int rc = send(hreq->accept_fd, hreq->response_bytes + hreq->sent, to_send, MSG_NOSIGNAL);
 	if (rc <= 0) {
 		m38_log_msg(LOG_ERR, "Could not send response.");
 		goto error;
