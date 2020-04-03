@@ -5,9 +5,10 @@ LIBS=-lm -lrt
 COMMON_OBJ=simple_sparsehash.o utils.o vector.o logging.o
 NAME=lib38moths.so
 
+DESTDIR?=
 PREFIX?=/usr/local
-INSTALL_LIB=$(PREFIX)/lib/
-INSTALL_INCLUDE=$(PREFIX)/include/38-moths/
+INSTALL_LIB=$(DESTDIR)$(PREFIX)/lib/
+INSTALL_INCLUDE=$(DESTDIR)$(PREFIX)/include/38-moths/
 
 
 all: lib test
@@ -38,8 +39,7 @@ install: all
 	@ln -fs $(INSTALL_LIB)$(NAME).$(VERSION) $(INSTALL_LIB)$(NAME)
 	@ln -fs $(INSTALL_LIB)$(NAME).$(VERSION) $(INSTALL_LIB)$(NAME).0
 	@install ./include/*.h $(INSTALL_INCLUDE)
-	@ldconfig $(INSTALL_LIB)
-	@echo "38-moths installed to $(PREFIX) :^)."
+	@echo "38-moths installed to $(DESTDIR)$(PREFIX) :^)."
 
 amalgamated:
 	mkdir $@
