@@ -19,7 +19,7 @@ typedef struct {
  */
 m38_range_header m38_parse_range_header(const char *range_query);
 
-/* xXx FUNCTION=m38_get_header_value_raw xXx
+/* xXx FUNCTION=m38_get_header_value_request xXx
  * xXx DESCRIPTION=Gets the value of `header` (eg. Content-Length) from an http_request object. Wraps get_header_value_raw. xXx
  * xXx RETURNS=The char string representing the header value, or NULL. Must be free'd. xXx
  */
