@@ -68,7 +68,7 @@ int hash_string_fnv1a(const unsigned char *string, const size_t siz, char outbuf
 /* xXx FUNCTION=m38_get_cookie_value xXx
 * xXx DESCRIPTION=Gets a specific value out of a cookie, like the session ID. xXx
 * xXx RETURNS=NULL or the value of the specific cookie value. xXx
-* xXx *cookie_string=The cookie value itself, which can be retrieved with m38_get_cookie_value. xXx
+* xXx *cookie_string=The value of the entire cookie string to parse, which comes from m38_get_header_value. xXx
 * xXx cookie_string_siz=The length of cookie_string. xXx
 * xXx needle=The value you're looking for inside the cookie, like `sessionid`. xXx
 */
