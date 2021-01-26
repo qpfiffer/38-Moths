@@ -39,8 +39,26 @@ static const char r_302[] =
 	"Content-Length: %zu\r\n"
 	"Connection: close\r\n";
 
+static const char r_400[] =
+	"HTTP/1.1 400 Bad Request\r\n"
+	"Content-Type: %s\r\n"
+	"Content-Length: %zu\r\n"
+	"Connection: close\r\n";
+
+static const char r_403[] =
+	"HTTP/1.1 403 Forbidden\r\n"
+	"Content-Type: %s\r\n"
+	"Content-Length: %zu\r\n"
+	"Connection: close\r\n";
+
 static const char r_404[] =
 	"HTTP/1.1 404 Not Found\r\n"
+	"Content-Type: %s\r\n"
+	"Content-Length: %zu\r\n"
+	"Connection: close\r\n";
+
+static const char r_500[] =
+	"HTTP/1.1 500 Internal Server Error\r\n"
 	"Content-Type: %s\r\n"
 	"Content-Length: %zu\r\n"
 	"Connection: close\r\n";
@@ -93,7 +111,10 @@ static const code_to_message response_headers[] = {
 	{206, r_206},
 	{301, r_301},
 	{302, r_302},
-	{404, r_404}
+	{400, r_400},
+	{403, r_403},
+	{404, r_404},
+	{500, r_500},
 };
 
 const code_to_message *get_response_headers() {
@@ -520,7 +541,9 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 	 * compile time. */
 	assert(matched_response != NULL);
 
-	if (response_code == 200 || response_code == 404 || response_code == 301 || response_code == 302) {
+	if (response_code == 200 || response_code == 404 || response_code == 301 ||
+			response_code == 302 ||response_code == 400 || response_code == 403 ||
+			response_code == 500) {
 		const size_t integer_length = UINT_LEN(response.outsize);
 		if (response.mimetype[0] == '\0')
 			memcpy(response.mimetype, "text/html", strlen("text/html"));
