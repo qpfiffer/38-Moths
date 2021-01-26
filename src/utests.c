@@ -257,6 +257,33 @@ int test_request_body_is_extracted() {
 	return 0;
 }
 
+int test_range_header_weird_case() {
+	const unsigned char req[] = " GET / HTTP/1.1\r\n"
+		"User-Agent: curl/7.35.0\r\n"
+		"Host: localhost:8080\r\n"
+		"Content-Length: 6\r\n"
+		"Range: 0-32768\r\n" // bytes=0-32768 Limit: 32768 Offset: 0
+		"Accept: */*\r\n\r\n";
+	m38_http_request request = {
+		.verb = {0},
+		.resource = {0},
+		.matches = {{0}},
+		.full_header = NULL,
+		.body_len = 0,
+		.full_body = NULL
+	};
+
+	int rc = m38_parse_request(req, strlen((char *)req), &request);
+	if (rc != 0)
+		return 1;
+
+	if (strnlen(request.full_header, strlen((char *)req)) != strlen((char *)req))
+		return 1;
+	if (request.full_body != NULL || request.body_len != 0)
+		return 1;
+	return 0;
+}
+
 int main(int argc, char *argv[]) {
 	UNUSED(argc);
 	UNUSED(argv);
@@ -277,6 +304,7 @@ int main(int argc, char *argv[]) {
 	run_test(test_request_body_is_extracted);
 	run_test(test_request_with_body_is_parseable_no_clength);
 	run_test(test_form_encoded_body);
+	run_test(test_range_header_weird_case);
 
 	m38_log_msg(LOG_INFO, "Tests passed: (%i/%i).\n", tests_run, tests_run + tests_failed);
 

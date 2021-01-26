@@ -562,9 +562,16 @@ m38_handled_request *m38_generate_response(const int accept_fd, const m38_app *a
 		m38_log_msg(LOG_INFO, "Range header parsed: Raw: %s Limit: %zu Offset: %zu", range_header_value, byte_range.limit, byte_range.offset);
 		free(range_header_value);
 
+		size_t end_byte = 0;
+		if (byte_range.limit == 0) {
+			end_byte = response.outsize - 1;
+		} else {
+			end_byte = (response.outsize - byte_range.limit) - 1;
+		}
+
+		if (end_byte >= response.outsize)
+			end_byte = response.outsize - 1;
 		const size_t start_byte = byte_range.offset < response.outsize ? byte_range.offset : 0;
-		const size_t end_byte = byte_range.limit == 0 ?
-			response.outsize - 1: (response.outsize - byte_range.limit) - 1;
 		const size_t max_size = response.outsize; /* Should be the same as file size. */
 		const size_t integer_length = UINT_LEN(max_size);
 
