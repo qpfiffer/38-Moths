@@ -77,9 +77,10 @@ void gshkl_filter_cleanup(char *result) {
 	free(result);
 }
 
-int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[WISDOM_OF_WORDS], const greshunkel_ctext *child) {
+int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[const], const greshunkel_ctext *child) {
 	assert(parent != NULL);
 	assert(child != NULL);
+	assert(name != NULL);
 
 	/* Create a new tuple to hold type and name and shit. */
 	greshunkel_tuple _stack_tuple = {
@@ -96,9 +97,10 @@ int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[WISDOM_OF_WO
 
 
 int gshkl_add_filter(greshunkel_ctext *ctext,
-		const char name[WISDOM_OF_WORDS],
+		const char name[const],
 		char *(*filter_func)(const char *argument),
 		void (*clean_up)(char *filter_result)) {
+	assert(name != NULL);
 
 	greshunkel_filter new_filter = {
 		.filter_func = filter_func,
@@ -111,8 +113,10 @@ int gshkl_add_filter(greshunkel_ctext *ctext,
 	return 0;
 }
 
-int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const char value[MAX_GSHKL_STR_SIZE]) {
+int gshkl_add_string(greshunkel_ctext *ctext, const char name[const], const char value[const]) {
 	assert(ctext != NULL);
+	assert(name != NULL);
+	assert(value != NULL);
 
 	/* Create a new tuple to hold type and name and shit. */
 	greshunkel_tuple _stack_tuple = {
@@ -135,8 +139,9 @@ int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], 
 	return _gshkl_add_var_to_context(ctext, &_stack_tuple);
 }
 
-int gshkl_add_int(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value) {
+int gshkl_add_int(greshunkel_ctext *ctext, const char name[const], const int value) {
 	assert(ctext != NULL);
+	assert(name != NULL);
 
 	greshunkel_tuple _stack_tuple = {
 		.name = {0},

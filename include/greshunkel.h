@@ -103,19 +103,19 @@ void gshkl_free_context(greshunkel_ctext *ctext);
  * xXx DESCRIPTION=Adds a string with the given name to a context. xXx
  * xXx RETURNS=0 on success, 1 otherwise. xXx
  * xXx *ctext=The context to add the string to. xXx
- * xXx name[WISDOM_OF_WORDS]=The name used to reference this variable later. xXx
+ * xXx name[const]=The name used to reference this variable later. xXx
  * xXx *value=The NULL terminated string that will be returned later. xXx
  */
-int gshkl_add_string(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const char *value);
+int gshkl_add_string(greshunkel_ctext *ctext, const char name[const], const char value[const]);
 
 /* xXx FUNCTION=gshkl_add_int xXx
  * xXx DESCRIPTION=Adds an integer with the given name to a context. xXx
  * xXx RETURNS=0 on success, 1 otherwise. xXx
  * xXx *ctext=The context to add the integer to. xXx
- * xXx name[WISDOM_OF_WORDS]=The name used to reference this variable later. xXx
+ * xXx name[const]=The name used to reference this variable later. xXx
  * xXx value=The integer that will be added to this context. xXx
  */
-int gshkl_add_int(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS], const int value);
+int gshkl_add_int(greshunkel_ctext *ctext, const char name[const], const int value);
 
 /* Array management */
 
@@ -162,7 +162,7 @@ int gshkl_add_sub_context_to_loop(greshunkel_var *loop,
  * xXx *child=The pre-built child context. xXx
  */
 int gshkl_add_sub_context(greshunkel_ctext *parent,
-		const char name[WISDOM_OF_WORDS],
+		const char name[const],
 		const greshunkel_ctext *child);
 
 /* Filters management */
@@ -171,12 +171,12 @@ int gshkl_add_sub_context(greshunkel_ctext *parent,
  * xXx DESCRIPTION=Adds a filter function to the given context. xXx
  * xXx RETURNS=0 on success, 1 otherwise. xXx
  * xXx *ctext=The context that the filter will be added to. xXx
- * xXx name[WISDOM_OF_WORDS]=The name used to reference this filter function. xXx
+ * xXx name[const]=The name used to reference this filter function. xXx
  * xXx (*filter_func)=The function that will be called from the template. xXx
  * xXx (*clean_up)=The clean up function that will be called after GRESHUNKEL is done calling <code>filter_func</code>. xXx
  */
 int gshkl_add_filter(greshunkel_ctext *ctext,
-		const char name[WISDOM_OF_WORDS],
+		const char name[const],
 		char *(*filter_func)(const char *argument),
 		void (*clean_up)(char *filter_result));
 

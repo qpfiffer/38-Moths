@@ -20,17 +20,17 @@ clean:
 
 test: greshunkel_test unit_test
 greshunkel_test: greshunkel_test.o greshunkel.o logging.o vector.o
-	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o greshunkel_test $^
+	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -o greshunkel_test $^
 
 unit_test: $(COMMON_OBJ) grengine.o utests.o greshunkel.o vector.o parse.o
-	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o unit_test $^ -lm -lrt
+	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -o unit_test $^ -lm -lrt
 
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c -fPIC $<
 
 lib: $(NAME)
 $(NAME): $(COMMON_OBJ) grengine.o greshunkel.o server.o parse.o
-	$(CC) $(CLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(NAME) -shared $^ $(LIBS)
+	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(NAME) -shared $^ $(LIBS)
 
 install: all
 	@mkdir -p $(INSTALL_LIB)
