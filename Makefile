@@ -1,4 +1,4 @@
-VERSION=0.1
+VERSION=0.5.1
 CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O0 -ffunction-sections -fdata-sections -g
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
@@ -36,8 +36,7 @@ install: all
 	@mkdir -p $(INSTALL_LIB)
 	@mkdir -p $(INSTALL_INCLUDE)
 	@install $(NAME) $(INSTALL_LIB)$(NAME).$(VERSION)
-	@ln -fs $(INSTALL_LIB)$(NAME).$(VERSION) $(INSTALL_LIB)$(NAME)
-	@ln -fs $(INSTALL_LIB)$(NAME).$(VERSION) $(INSTALL_LIB)$(NAME).0
+	@cd $(INSTALL_LIB) && ln -fs $(NAME).$(VERSION) $(NAME).0
 	@install ./include/*.h $(INSTALL_INCLUDE)
 	@echo "38-moths installed to $(DESTDIR)$(PREFIX) :^)."
 
