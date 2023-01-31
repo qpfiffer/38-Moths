@@ -1,9 +1,11 @@
-VERSION=0.5.2
+VERSION=0.5.3
 CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O0 -ffunction-sections -fdata-sections -g
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
 COMMON_OBJ=simple_sparsehash.o utils.o vector.o logging.o
-NAME=lib38moths.so
+
+SONAME=lib38moths.so
+REALNAME=lib38moths.so.$(VERSION)
 
 DESTDIR?=
 PREFIX?=/usr/local
@@ -16,7 +18,7 @@ all: lib test
 clean:
 	rm -f *.o
 	rm -f greshunkel_test
-	rm -f $(NAME)
+	rm -f $(REALNAME)
 
 test: greshunkel_test unit_test
 greshunkel_test: greshunkel_test.o greshunkel.o logging.o vector.o
@@ -28,15 +30,15 @@ unit_test: $(COMMON_OBJ) grengine.o utests.o greshunkel.o vector.o parse.o
 %.o: ./src/%.c
 	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -c -fPIC $<
 
-lib: $(NAME)
-$(NAME): $(COMMON_OBJ) grengine.o greshunkel.o server.o parse.o
-	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(NAME) -shared $^ $(LIBS)
+lib: $(REALNAME)
+$(REALNAME): $(COMMON_OBJ) grengine.o greshunkel.o server.o parse.o
+	$(CC) $(CFLAGS) $(LIB_INCLUDES) $(INCLUDES) -o $(REALNAME) -shared -Wl,-soname,${SONAME} $^ $(LIBS)
 
 install: all
 	@mkdir -p $(INSTALL_LIB)
 	@mkdir -p $(INSTALL_INCLUDE)
-	@install $(NAME) $(INSTALL_LIB)$(NAME).$(VERSION)
-	@cd $(INSTALL_LIB) && ln -fs $(NAME).$(VERSION) $(NAME).0
+	@install $(REALNAME) $(INSTALL_LIB)$(REALNAME)
+	@cd $(INSTALL_LIB) && ln -fs $(REALNAME) $(SONAME).0
 	@install ./include/*.h $(INSTALL_INCLUDE)
 	@echo "38-moths installed to $(DESTDIR)$(PREFIX) :^)."
 
@@ -52,7 +54,6 @@ vendor: all
 	@echo "38-moths amalgamated into ./amalgamated :^)."
 
 uninstall:
-	rm -rf $(INSTALL_LIB)$(NAME).$(VERSION)
-	rm -rf $(INSTALL_LIB)$(NAME)
-	rm -rf $(INSTALL_LIB)$(NAME).0
+	rm -rf $(INSTALL_LIB)$(REALNAME)
+	rm -rf $(INSTALL_LIB)$(SONAME).0
 	rm -rf $(INSTALL_INCLUDE)

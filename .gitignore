@@ -7,6 +7,6 @@ greshunkel_test
 unit_test
 ./webms
 .vagrant
-*.so
+*.so*
 python/__pycache__/
 amalgamated
