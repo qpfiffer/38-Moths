@@ -4,7 +4,7 @@
 /* xXx DEFINE=VERSION xXx
 * xXx DESCRIPTION=The current version of the 38-Moths. xXx
 */
-#define VERSION "0.5.3"
+#define VERSION "0.5.4"
 
 #include "logging.h"
 #include "cookie.h"

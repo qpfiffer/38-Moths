@@ -1,4 +1,4 @@
-VERSION=0.5.3
+VERSION=0.5.4
 CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O0 -ffunction-sections -fdata-sections -g
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
@@ -9,7 +9,8 @@ REALNAME=lib38moths.so.$(VERSION)
 
 DESTDIR?=
 PREFIX?=/usr/local
-INSTALL_LIB=$(DESTDIR)$(PREFIX)/lib/
+LIBDIR?=lib
+INSTALL_LIB=$(DESTDIR)$(PREFIX)/$(LIBDIR)/
 INSTALL_INCLUDE=$(DESTDIR)$(PREFIX)/include/38-moths/
 
 
