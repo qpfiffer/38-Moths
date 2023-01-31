@@ -1,4 +1,4 @@
-VERSION=0.5.1
+VERSION=0.5.2
 CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O0 -ffunction-sections -fdata-sections -g
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
