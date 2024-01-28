@@ -1,5 +1,5 @@
-VERSION=0.5.5
-CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O0 -ffunction-sections -fdata-sections -g
+VERSION=0.5.6
+CFLAGS=-Werror -Wno-ignored-qualifiers -Wno-missing-field-initializers -Wextra -Wall -O2 -ffunction-sections -fdata-sections
 INCLUDES=-pthread -I./include/
 LIBS=-lm -lrt
 COMMON_OBJ=simple_sparsehash.o utils.o vector.o logging.o

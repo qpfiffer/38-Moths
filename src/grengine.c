@@ -235,7 +235,7 @@ static int mmap_file_ol(const char *file_path, m38_http_response *response,
 	}
 	if (strlen(response->mimetype) == 0) {
 		if (found_dot) {
-			strncpy(ending, file_path + i, sizeof(ending));
+			strncpy(ending, file_path + i, sizeof(ending) - 1);
 			guess_mimetype(ending, sizeof(ending), response);
 		} else {
 			/* Fuck it, do something smart later with render_file. */

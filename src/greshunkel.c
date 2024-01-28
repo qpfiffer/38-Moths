@@ -90,7 +90,8 @@ int gshkl_add_sub_context(greshunkel_ctext *parent, const char name[const], cons
 			.sub_ctext = child
 		}
 	};
-	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
+	const size_t name_len = strnlen(name, WISDOM_OF_WORDS) < WISDOM_OF_WORDS ? strnlen(name, WISDOM_OF_WORDS) : WISDOM_OF_WORDS;
+	strncpy(_stack_tuple.name, name, name_len);
 
 	return _gshkl_add_var_to_context(parent, &_stack_tuple);
 }
@@ -107,7 +108,7 @@ int gshkl_add_filter(greshunkel_ctext *ctext,
 		.clean_up = clean_up,
 		.name = {0}
 	};
-	strncpy(new_filter.name, name, sizeof(new_filter.name));
+	strncpy(new_filter.name, name, sizeof(new_filter.name) - 1);
 
 	vector_append(ctext->filter_functions, &new_filter, sizeof(struct greshunkel_filter));
 	return 0;
@@ -124,7 +125,7 @@ int gshkl_add_string(greshunkel_ctext *ctext, const char name[const], const char
 		.type = GSHKL_STR,
 		.value =  {{0}}
 	};
-	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
+	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS - 1);
 
 	/* Copy the value of the string into the var object: */
 	greshunkel_var _stack_var = {{0}};
@@ -148,7 +149,7 @@ int gshkl_add_int(greshunkel_ctext *ctext, const char name[const], const int val
 		.type = GSHKL_STR,
 		.value = {{0}}
 	};
-	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
+	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS - 1);
 
 	greshunkel_var _stack_var = {{0}};
 	snprintf(_stack_var.str, MAX_GSHKL_STR_SIZE, "%i", value);
@@ -158,7 +159,7 @@ int gshkl_add_int(greshunkel_ctext *ctext, const char name[const], const int val
 	return _gshkl_add_var_to_context(ctext, &_stack_tuple);
 }
 
-greshunkel_var gshkl_add_array(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS]) {
+greshunkel_var gshkl_add_array(greshunkel_ctext *ctext, const char name[]) {
 	assert(ctext != NULL);
 
 	greshunkel_tuple _stack_tuple = {
@@ -168,7 +169,8 @@ greshunkel_var gshkl_add_array(greshunkel_ctext *ctext, const char name[WISDOM_O
 			.arr = vector_new(sizeof(greshunkel_tuple), 16)
 		}
 	};
-	strncpy(_stack_tuple.name, name, WISDOM_OF_WORDS);
+	const size_t name_len = strnlen(name, WISDOM_OF_WORDS) < WISDOM_OF_WORDS ? strnlen(name, WISDOM_OF_WORDS) : WISDOM_OF_WORDS;
+	strncpy(_stack_tuple.name, name, name_len);
 
 	_gshkl_add_var_to_context(ctext, &_stack_tuple);
 	return _stack_tuple.value;
@@ -411,7 +413,7 @@ _filter_line(const greshunkel_ctext *ctext, const line *current_line, const stru
 		new_line_to_add.data = NULL;
 		operating_line = &interpolated_line;
 
-		memset(filter_matches_no_args, 0, sizeof(filter_matches));
+		memset(filter_matches_no_args, 0, sizeof(filter_matches_no_args));
 	}
 
 	return *operating_line;

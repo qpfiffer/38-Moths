@@ -123,9 +123,9 @@ int gshkl_add_int(greshunkel_ctext *ctext, const char name[const], const int val
  * xXx DESCRIPTION=Creates a new array object inside of the given context. xXx
  * xXx RETURNS=The newly created loop object. xXx
  * xXx *ctext=The context to add the array to. xXx
- * xXx name[WISDOM_OF_WORDS]=The name used to reference this variable later. xXx
+ * xXx name[]=The name used to reference this variable later. Should not exceed WISDOM_OF_WORDS in length. xXx
  */
-greshunkel_var gshkl_add_array(greshunkel_ctext *ctext, const char name[WISDOM_OF_WORDS]);
+greshunkel_var gshkl_add_array(greshunkel_ctext *ctext, const char name[]);
 
 /* xXx FUNCTION=gshkl_add_string_to_loop xXx
  * xXx DESCRIPTION=Adds a string to a greshunkel array. xXx
