@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+    <script src="./a.out.js"></script>
+    <script>
+      Module.onRuntimeInitialized = async () => {
+        const api = {
+          init: Module.cwrap("init", "number", []),
+        };
+        console.log(api.init());
+      };
+    </script>
+</html>
