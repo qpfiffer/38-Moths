@@ -3,10 +3,23 @@
     <script src="./a.out.js"></script>
     <script>
       Module.onRuntimeInitialized = async () => {
-        const api = {
-          init: Module.cwrap("init", "number", []),
+        const Lib = {
+          add_string: Module.cwrap("ghskl_add_string_to_loop", "string", []),
+        //lib38moths.gshkl_add_string_to_loop(byref(loop), c_char_p(value.encode()))
         };
-        console.log(api.init());
+
+        class GreshunkelContext {
+            constructor(vars) {
+                for (const [key, value] of Object.entries(vars)) {
+                    if (typeof value == "string") {
+                    } else if (typeof value == "number") {
+                    } else if (typeof value == "object") {
+                    } else {
+                    }
+            }
+        };
+        const GreshunkelTemplate = {
+        };
       };
     </script>
 </html>
